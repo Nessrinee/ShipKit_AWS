@@ -1,0 +1,87 @@
+# postgres-ha/docker-compose.yml
+# Usage: cp .env.example .env && docker compose up -d
+version: "3.9"
+
+services:
+  postgres-primary:
+    image: postgres:16-alpine
+    container_name: pg-primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:                ${POSTGRES_USER}
+      POSTGRES_PASSWORD:            ${POSTGRES_PASSWORD}
+      POSTGRES_DB:                  ${POSTGRES_DB}
+      POSTGRES_REPLICATION_USER:    replicator
+      POSTGRES_REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+    volumes:
+      - pg-primary-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - db-net
+
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: pg-replica
+    restart: unless-stopped
+    environment:
+      PGUSER:               replicator
+      PGPASSWORD:           ${REPLICATION_PASSWORD}
+      POSTGRES_PRIMARY_HOST: postgres-primary
+    command: >
+      bash -c "
+        until pg_isready -h postgres-primary -U replicator; do sleep 2; done
+        pg_basebackup -h postgres-primary -U replicator -D /var/lib/postgresql/data -P -Xs -R
+        postgres
+      "
+    volumes:
+      - pg-replica-data:/var/lib/postgresql/data
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - db-net
+
+  pgbouncer:
+    image: pgbouncer/pgbouncer:1.22
+    container_name: pgbouncer
+    restart: unless-stopped
+    environment:
+      DATABASES_HOST:     postgres-primary
+      DATABASES_PORT:     "5432"
+      DATABASES_USER:     ${POSTGRES_USER}
+      DATABASES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASES_DBNAME:   ${POSTGRES_DB}
+      POOL_MODE:          transaction
+      MAX_CLIENT_CONN:    "200"
+      DEFAULT_POOL_SIZE:  "25"
+    ports:
+      - "5432:5432"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - db-net
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: pg-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-primary:5432/${POSTGRES_DB}?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - db-net
+
+volumes:
+  pg-primary-data:
+  pg-replica-data:
+
+networks:
+  db-net:
+    driver: bridge

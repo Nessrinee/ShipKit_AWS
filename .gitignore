@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production builds
+frontend/dist/
+frontend/build/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+.env.staging
+backend/.env
+frontend/.env
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+backend/data/
+
+# Logs
+logs/
+*.log
+backend/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker/nginx/ssl/
+
+# Terraform state — use remote backend
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Test coverage
+coverage/
+
+# Temp
+tmp/
+temp/
+.vercel

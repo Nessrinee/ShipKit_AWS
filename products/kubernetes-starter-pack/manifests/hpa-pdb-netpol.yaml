@@ -1,0 +1,108 @@
+---
+# hpa.yaml — HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind:       Deployment
+    name:       app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type:               Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type:               Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type:          Pods
+          value:         2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300   # Wait 5min before scaling down
+      policies:
+        - type:          Pods
+          value:         1
+          periodSeconds: 120
+---
+# pdb.yaml — PodDisruptionBudget (zero-downtime node drains)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app-pdb
+  namespace: production
+spec:
+  minAvailable: 1     # Always keep at least 1 pod running
+  selector:
+    matchLabels:
+      app: app
+---
+# networkpolicy.yaml — Default-deny + explicit allow
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: production
+spec:
+  podSelector: {}       # Select all pods in namespace
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow ingress from nginx-ingress controller only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-controller
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - port: 3000
+---
+# Allow egress to DNS + external HTTPS only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns-https
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: app
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53    # DNS
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - ports:
+        - port: 443   # HTTPS external

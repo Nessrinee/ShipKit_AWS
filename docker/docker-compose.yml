@@ -1,0 +1,53 @@
+# docker/docker-compose.yml — Local development
+# Usage: docker compose -f docker/docker-compose.yml up --build
+
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: shipkit-backend
+    restart: unless-stopped
+    env_file: ../backend/.env
+    environment:
+      NODE_ENV:      development
+      DATABASE_PATH: /app/data/shipkit.db
+      PRODUCTS_PATH: /products
+    volumes:
+      - backend-data:/app/data
+      - ../products:/products:ro
+      - ../backend/logs:/app/logs
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test:     ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+    networks:
+      - shipkit-net
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000/api
+    container_name: shipkit-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - shipkit-net
+
+volumes:
+  backend-data:
+
+networks:
+  shipkit-net:
+    driver: bridge

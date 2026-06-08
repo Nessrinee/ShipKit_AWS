@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-bg text-text font-body antialiased overflow-x-hidden;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(0,255,127,.03) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(0,200,255,.03) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-bg; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-accent; }
+
+  /* Grid background utility */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0,255,127,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,127,.025) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
+  }
+
+  /* Code highlight */
+  .code-block {
+    @apply font-mono text-sm leading-relaxed bg-surface border border-border rounded-lg p-5 overflow-x-auto;
+  }
+  .code-block .kw  { @apply text-blue; }
+  .code-block .str { @apply text-yellow; }
+  .code-block .cmt { @apply text-muted italic; }
+  .code-block .val { @apply text-accent; }
+
+  /* Gumroad button override */
+  .gumroad-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-family: 'Exo 2', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    background: #00ff7f !important;
+    color: #000 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: opacity .2s, transform .15s !important;
+    white-space: nowrap !important;
+  }
+  .gumroad-button:hover { opacity: .85 !important; transform: scale(1.03) !important; }
+  .gumroad-button-logo { display: none !important; }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(90deg, #00ff7f, #00c8ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .border-glow { box-shadow: 0 0 0 1px rgba(0,255,127,.25), 0 8px 32px rgba(0,0,0,.4); }
+  .card-hover { @apply transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_20px_52px_rgba(0,0,0,.5)]; }
+}

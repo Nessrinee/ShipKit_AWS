@@ -1,0 +1,54 @@
+# values.yaml — Default values for the ShipKit app Helm chart
+# Override these in your environment-specific values file.
+
+replicaCount: 2
+
+image:
+  repository: your-registry/your-app   # ← change this
+  tag: "1.0.0"
+  pullPolicy: Always
+
+service:
+  type:       ClusterIP
+  port:       80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  host: yourdomain.com                  # ← change this
+  tlsSecret: app-tls
+  clusterIssuer: letsencrypt-prod
+  rateLimitRps: "30"
+
+resources:
+  requests:
+    cpu:    "100m"
+    memory: "128Mi"
+  limits:
+    cpu:    "500m"
+    memory: "512Mi"
+
+autoscaling:
+  enabled:     true
+  minReplicas: 2
+  maxReplicas: 10
+  cpuTarget:   70
+  memTarget:   80
+
+pdb:
+  enabled:      true
+  minAvailable: 1
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser:    1000
+  runAsGroup:   1000
+  fsGroup:      2000
+
+env:
+  # Add non-secret env vars here
+  NODE_ENV: production
+
+# Secrets must be created manually or via External Secrets Operator
+# kubectl create secret generic app-secrets --from-env-file=.env.prod
+existingSecret: app-secrets

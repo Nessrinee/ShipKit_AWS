@@ -1,0 +1,81 @@
+---
+# namespace.yaml — Isolated namespace with resource quotas
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    env: production
+    managed-by: shipkit
+---
+# ResourceQuota — prevent runaway resource usage
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu:    "4"
+    requests.memory: "8Gi"
+    limits.cpu:      "8"
+    limits.memory:   "16Gi"
+    pods:            "50"
+---
+# LimitRange — set defaults so every pod has sane limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: production
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu:    "100m"
+        memory: "128Mi"
+      default:
+        cpu:    "500m"
+        memory: "512Mi"
+      max:
+        cpu:    "2"
+        memory: "4Gi"
+---
+# ServiceAccount for the application
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-sa
+  namespace: production
+  annotations:
+    # Uncomment and set your IRSA role ARN for AWS EKS
+    # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/my-app-role
+automountServiceAccountToken: false
+---
+# Role — least-privilege RBAC for the app
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-role
+  namespace: production
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs:     ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs:     ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-rolebinding
+  namespace: production
+subjects:
+  - kind:      ServiceAccount
+    name:      app-sa
+    namespace: production
+roleRef:
+  kind:     Role
+  name:     app-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+data/
+logs/
+*.db
+*.log
+.git
+.gitignore
+README.md
+.eslintrc*
+jest.config*
+**/*.test.js
+**/*.spec.js
+coverage/
