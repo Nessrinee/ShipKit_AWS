@@ -1,8 +1,30 @@
+# Dependencies — built fresh inside Dockerfile
 node_modules
-dist/
-.env
-.env.*
+npm-debug.log
+
+# Build output — generated inside Docker, not copied in
+dist
+
+# Version control
 .git
 .gitignore
+
+# Editor configs
+.vscode
+.idea
+
+# Documentation
 README.md
-.eslintrc*
+*.md
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Environment files
+.env
+.env.*
+
+# OS artifacts
+.DS_Store
+Thumbs.db

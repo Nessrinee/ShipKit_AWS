@@ -1,53 +1,56 @@
-# docker/docker-compose.yml — Local development
-# Usage: docker compose -f docker/docker-compose.yml up --build
-
-version: "3.9"
+#====================================================#
+# Docker-compose Files
+# version 3.9:
+# Supports healthcheck condition in depends_on ✅
+# Supports named volumes ✅
+# Supports resource limits ✅
+# Current stable format for Docker Compose v2
+#====================================================#
 
 services:
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    image: shipkit-backend:v1.0.0
     container_name: shipkit-backend
-    restart: unless-stopped
-    env_file: ../backend/.env
-    environment:
-      NODE_ENV:      development
-      DATABASE_PATH: /app/data/shipkit.db
-      PRODUCTS_PATH: /products
-    volumes:
-      - backend-data:/app/data
-      - ../products:/products:ro
-      - ../backend/logs:/app/logs
+    networks:
+      - shipkit-network
     ports:
       - "4000:4000"
+    volumes:
+      - shipkit-db-data:/app/data
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      JWT_SECRET: local-dev-secret-not-for-production
+      JWT_REFRESH_SECRET: local-dev-refresh-not-for-production
+      LICENSE_SECRET: local-dev-license-not-for-production
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: DevPassword123!
+      CORS_ORIGIN: http://localhost
+      DATABASE_PATH: /app/data/shipkit.db
+      PRODUCTS_PATH: /app/products
     healthcheck:
-      test:     ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
-      interval: 30s
-      timeout:  10s
-      retries:  3
-    networks:
-      - shipkit-net
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: http://localhost:4000/api
+    image: shipkit-frontend:v1.0.0
     container_name: shipkit-frontend
-    restart: unless-stopped
+    networks:
+      - shipkit-network
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
-    networks:
-      - shipkit-net
-
-volumes:
-  backend-data:
-
+    restart: unless-stopped
 networks:
-  shipkit-net:
+  shipkit-network:
     driver: bridge
+   
+volumes:
+  shipkit-db-data:
+    driver: local

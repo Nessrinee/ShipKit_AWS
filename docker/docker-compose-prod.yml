@@ -1,0 +1,73 @@
+version: "3.9"
+
+networks:
+  shipkit-network:
+    driver: bridge
+
+volumes:
+  shipkit-db-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/shipkit/data
+    # Explicit host path — you know exactly where your database is
+    # Survives Docker reinstall, easy to back up to S3
+
+services:
+
+  backend:
+    image: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend:latest
+    container_name: shipkit-backend
+    networks:
+      - shipkit-network
+    # NO ports published — backend not accessible from internet
+    # Only reachable by frontend container via internal network
+    expose:
+      - "4000"
+    volumes:
+      - shipkit-db-data:/app/data
+    env_file:
+      - /opt/shipkit/.env
+    # Secrets come from .env file written by deploy script
+    # That file fetches from Parameter Store at deploy time
+    # Never hardcoded here
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    # Resource limits prevent one container consuming
+    # all server memory and crashing the host OS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Log rotation — without this, logs fill disk over time
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    image: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-frontend:latest
+    container_name: shipkit-frontend
+    networks:
+      - shipkit-network
+    ports:
+      - "80:80"
+    # Only Nginx exposes a port to the outside world
+    mem_limit: 64m
+    memswap_limit: 64m
+    cpus: 0.25
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

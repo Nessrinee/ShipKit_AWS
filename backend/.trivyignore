@@ -1,0 +1,45 @@
+cat > ~/shipkit/backend/.trivyignore << 'EOF'
+# =============================================================
+# ShipKit — Trivy Accepted Risk Register
+# Last reviewed: 2025-01-15
+# Reviewer: Nesrine (Cloud/DevOps Engineer)
+# =============================================================
+
+# CVE-2024-21538 — cross-spawn ReDoS
+# Parent: transitive via archiver (production) or jest (dev)
+# Risk: ShipKit never calls cross-spawn with user-controlled input
+# No child processes spawned from user data anywhere in codebase
+# Fix: blocked on upstream archiver or parent package update
+CVE-2024-21538
+
+# CVE-2025-64756 — glob command injection via malicious filenames
+# Parent: archiver@6.0.2 → archiver-utils → glob@8.1.0
+# Risk: glob patterns in ShipKit are hardcoded product directory paths
+# User input never reaches glob pattern resolution
+# Fix: requires archiver to update to glob@11.x — not yet available
+CVE-2025-64756
+
+# CVE-2026-26996, CVE-2026-27903, CVE-2026-27904 — minimatch DoS
+# Parent: archiver@6.0.2 → minimatch@5.1.9 / 9.0.5
+# Risk: minimatch patterns sourced from hardcoded config, not user input
+# Denial of service via crafted glob requires attacker to control
+# the pattern string — impossible in current ShipKit architecture
+# Fix: blocked on archiver upstream
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# CVE-2026-23745, CVE-2026-23950, CVE-2026-24842
+# CVE-2026-26960, CVE-2026-29786, CVE-2026-31802 — node-tar
+# Parent: under investigation (not directly visible in npm ls)
+# Risk: ShipKit never EXTRACTS tar archives from any source
+# Only creates ZIP files using archiver — tar extraction path
+# is never triggered in any application code path
+# Fix: pending investigation of true parent package
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
+EOF

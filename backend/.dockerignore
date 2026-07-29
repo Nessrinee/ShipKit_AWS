@@ -1,16 +1,38 @@
-node_modules
-npm-debug.log
+# Secrets — never bake into image
 .env
 .env.*
-data/
-logs/
-*.db
-*.log
+*.pem
+*.key
+
+# Dependencies — installed fresh inside Dockerfile
+node_modules
+npm-debug.log
+
+# Version control
 .git
 .gitignore
+
+# Documentation
 README.md
-.eslintrc*
-jest.config*
-**/*.test.js
-**/*.spec.js
-coverage/
+*.md
+
+# Editor configs
+.vscode
+.idea
+
+# Docker files (no reason to copy these into the image itself)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Tests — not needed at runtime
+__tests__
+*.test.js
+jest.config.js
+coverage
+
+# Local runtime data (created fresh by the container)
+data
+logs
+*.db
+*.log
