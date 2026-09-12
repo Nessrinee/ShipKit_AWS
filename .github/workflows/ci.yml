@@ -1,6 +1,6 @@
 name: CI — Continuous Integration
 
-# ── Triggers ──────────────────────────────────────────────────
+
 on:
   pull_request:
     branches:
@@ -8,21 +8,22 @@ on:
     # Run CI on every PR targeting main
     # This is what branch protection checks wait for
 
-
-# ── Jobs ──────────────────────────────────────────────────────
+    # ── Jobs ──────────────────────────────────────────────────────
 jobs:
-
-  # ── Job 1: Run Tests ────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
-    # ubuntu-latest = GitHub-hosted runner
-    # Fresh VM per run  no state from previous runs
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # Clones your repository onto the runner
-        # Without this, the runner has no code to work with
+  # Clones your repository onto the runner
+  # Without this, the runner has no code to work with
+
+
+
+
+
+
 
 
