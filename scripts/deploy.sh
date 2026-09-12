@@ -113,3 +113,225 @@ until docker inspect shipkit-backend \
 done
 
 echo "✅ Deployment complete — image: ${IMAGE_TAG}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+name: CD — Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+  
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+jobs:
+
+  build-and-push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    environment: production
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-ShipKit-${{ github.run_id }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate image tag from commit SHA
+        id: meta
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "version=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "Image tag: ${SHORT_SHA}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/shipkit-backend:${{ steps.meta.outputs.version }}
+          # NO :latest tag — commit SHA only
+          # deploy.sh receives the exact SHA from GitHub Actions
+          # No ambiguity about which image is deployed
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/shipkit-frontend:${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Deploy-${{ github.run_id }}
+
+      - name: Get EC2 Instance ID
+        id: get-instance
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=shipkit-server" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "instance-id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
+          echo "Deploying to: ${INSTANCE_ID}"
+
+      - name: Trigger deployment via SSM
+        id: ssm
+        run: |
+          IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+
+          # GitHub Actions tells SSM exactly which image to deploy
+          # SSM passes it to deploy.sh on EC2
+          # deploy.sh pulls that exact image from ECR
+          # No file copying — deploy.sh already lives on EC2
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids ${{ steps.get-instance.outputs.instance-id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              \"/opt/shipkit/scripts/deploy.sh ${IMAGE_TAG}\"
+            ]" \
+            --comment "Deploy ${{ github.sha }} via GitHub Actions" \
+            --timeout-seconds 300 \
+            --region ${{ env.AWS_REGION }} \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command-id=${COMMAND_ID}" >> $GITHUB_OUTPUT
+          echo "SSM Command ID: ${COMMAND_ID}"
+
+      - name: Wait for deployment to complete
+        run: |
+          COMMAND_ID="${{ steps.ssm.outputs.command-id }}"
+          INSTANCE_ID="${{ steps.get-instance.outputs.instance-id }}"
+          MAX_WAIT=300
+          WAITED=0
+
+          while [ $WAITED -lt $MAX_WAIT ]; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id ${COMMAND_ID} \
+              --instance-id ${INSTANCE_ID} \
+              --query "Status" \
+              --output text \
+              --region ${{ env.AWS_REGION }} 2>/dev/null || echo "Pending")
+
+            echo "Status: ${STATUS} (${WAITED}s)"
+
+            case $STATUS in
+              Success)
+                echo "✅ Deployment succeeded"
+
+                # Print deploy.sh output for the audit log
+                aws ssm get-command-invocation \
+                  --command-id ${COMMAND_ID} \
+                  --instance-id ${INSTANCE_ID} \
+                  --query "StandardOutputContent" \
+                  --output text \
+                  --region ${{ env.AWS_REGION }}
+                break
+                ;;
+              Failed|Cancelled|TimedOut|DeliveryTimedOut)
+                echo "❌ Deployment failed — deploy.sh output:"
+
+                # Print what went wrong on EC2
+                aws ssm get-command-invocation \
+                  --command-id ${COMMAND_ID} \
+                  --instance-id ${INSTANCE_ID} \
+                  --query "StandardOutputContent" \
+                  --output text \
+                  --region ${{ env.AWS_REGION }}
+
+                aws ssm get-command-invocation \
+                  --command-id ${COMMAND_ID} \
+                  --instance-id ${INSTANCE_ID} \
+                  --query "StandardErrorContent" \
+                  --output text \
+                  --region ${{ env.AWS_REGION }}
+                exit 1
+                ;;
+              *)
+                sleep 10
+                WAITED=$((WAITED + 10))
+                ;;
+            esac
+          done
+
+      - name: Verify application health
+        run: |
+          INSTANCE_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=shipkit-server" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+
+          echo "Health check: http://${INSTANCE_IP}/api/health"
+
+          for i in $(seq 1 6); do
+            HTTP=$(curl -s -o /dev/null \
+              -w "%{http_code}" \
+              --max-time 10 \
+              "http://${INSTANCE_IP}/api/health" || echo "000")
+
+            if [ "$HTTP" = "200" ]; then
+              echo "✅ Application healthy — image: ${{ needs.build-and-push.outputs.image-tag }}"
+              exit 0
+            fi
+
+            echo "Attempt ${i}/6 — HTTP ${HTTP}"
+            sleep 10
+          done
+
+          echo "Health check failed"
+          exit 1

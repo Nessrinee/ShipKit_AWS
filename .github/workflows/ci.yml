@@ -1,11 +1,26 @@
 name: CI - Continuous Integration
-
+# --------- Triggers --------------------
 on:
   pull_request:
     branches:
       - main
-
+#---------- Jobs : Run Test ---------------------
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+
+steps:
+  - name : Checkout code 
+    uses: actions/checkout@v4
+    # Clones you repository into the runner
+    # without this the runner has no code to work with
+
+  - name : setup Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: '20'
+      cache: 'npm'
+      cache-dependency-path: backend/package-lock.json
+      # cache: npm -> Github caches node_modules between runs
+      # Avoids re-downloading
