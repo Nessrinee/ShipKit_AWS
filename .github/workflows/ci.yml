@@ -1,5 +1,5 @@
 name: CI — Continuous Integration
-# ── Triggers ──────────────────────────────────────────────────
+
 on:
   pull_request:
     branches:
@@ -16,5 +16,5 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-  # Clones your repository onto the runner
-  # Without this, the runner has no code to work with
+        # Clones your repository onto the runner
+        # Without this, the runner has no code to work with
