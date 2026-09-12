@@ -1,6 +1,5 @@
 name: CI — Continuous Integration
 
-
 on:
   pull_request:
     branches:
@@ -8,7 +7,7 @@ on:
     # Run CI on every PR targeting main
     # This is what branch protection checks wait for
 
-    # ── Jobs ──────────────────────────────────────────────────────
+# ── Jobs ──────────────────────────────────────────────────────
 jobs:
   test:
     name: Test
@@ -19,11 +18,3 @@ jobs:
         uses: actions/checkout@v4
   # Clones your repository onto the runner
   # Without this, the runner has no code to work with
-
-
-
-
-
-
-
-
