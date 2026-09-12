@@ -1,26 +1,28 @@
-name: CI - Continuous Integration
-# --------- Triggers --------------------
+name: CI — Continuous Integration
+
+# ── Triggers ──────────────────────────────────────────────────
 on:
   pull_request:
     branches:
       - main
-#---------- Jobs : Run Test ---------------------
+    # Run CI on every PR targeting main
+    # This is what branch protection checks wait for
+
+
+# ── Jobs ──────────────────────────────────────────────────────
 jobs:
+
+  # ── Job 1: Run Tests ────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
+    # ubuntu-latest = GitHub-hosted runner
+    # Fresh VM per run  no state from previous runs
 
-steps:
-  - name : Checkout code 
-    uses: actions/checkout@v4
-    # Clones you repository into the runner
-    # without this the runner has no code to work with
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # Clones your repository onto the runner
+        # Without this, the runner has no code to work with
 
-  - name : setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '20'
-      cache: 'npm'
-      cache-dependency-path: backend/package-lock.json
-      # cache: npm -> Github caches node_modules between runs
-      # Avoids re-downloading
+
