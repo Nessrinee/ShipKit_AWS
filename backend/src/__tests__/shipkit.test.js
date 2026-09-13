@@ -29,10 +29,10 @@ const {
   verifyDownloadToken,
 } = require('../utils/licenseKey');
 
-const { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } = require('../src/utils/jwt');
-const { initDb, getDb } = require('../src/db/database');
+const { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } = require('../utils/jwt');
+const { initDb, getDb } = require('../db/database');
 const request = require('supertest');
-const app     = require('../src/app');
+const app     = require('../app');
 
 // Initialize DB once for all tests
 beforeAll(() => {
