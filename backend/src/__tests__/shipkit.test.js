@@ -22,6 +22,10 @@ process.env.CORS_ORIGIN         = 'http://localhost:5173';
 process.env.GUMROAD_SELLER_ID   = 'test-seller-id';
 process.env.GUMROAD_WEBHOOK_TOKEN = 'test-webhook-token';
 
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => '12345678-1234-1234-1234-123456789abc')
+}));
+
 const {
   generateLicenseKey,
   verifyLicenseKey,
