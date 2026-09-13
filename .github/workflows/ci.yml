@@ -16,5 +16,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # Clones your repository onto the runner
+        with:
+          node-version: '20'
+        # Clones your repository into the runner
         # Without this, the runner has no code to work with
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
