@@ -29,3 +29,6 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
+      - name: Check installed dependencies
+        working-directory: backend
+        run: npm list --depth=0
