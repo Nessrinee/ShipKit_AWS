@@ -27,7 +27,7 @@ const {
   verifyLicenseKey,
   generateDownloadToken,
   verifyDownloadToken,
-} = require('../src/utils/licenseKey');
+} = require('../utils/licenseKey');
 
 const { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } = require('../src/utils/jwt');
 const { initDb, getDb } = require('../src/db/database');
