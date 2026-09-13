@@ -10,8 +10,8 @@
 'use strict';
 
 // ── Test environment setup ────────────────────────────────────────────────────
-process.env.NODE_ENV            = 'test';
-process.env.JWT_SECRET          = 'test-jwt-secret-64-chars-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+process.env.NODE_ENV              = 'test';
+process.env.JWT_SECRET            = 'test-jwt-secret-64-chars-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 process.env.JWT_REFRESH_SECRET  = 'test-refresh-secret-64-chars-xxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 process.env.LICENSE_SECRET      = 'test-license-secret-for-unit-tests-only';
 process.env.ADMIN_PASSWORD      = 'TestAdminPass123!';
@@ -304,7 +304,7 @@ describe('🌐 API Endpoints', () => {
 
     test('strips whitespace from email', async () => {
       const res = await request(app).post('/api/auth/login').send({
-        email:    '  admin@test.com  ',  // leading/trailing spaces
+        email:    '   admin@test.com   ',  // leading/trailing spaces
         password: 'TestAdminPass123!',
       });
       // Should succeed — email is trimmed in schema
