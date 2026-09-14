@@ -1,12 +1,12 @@
 /**
  * downloads.js — Customer license verification & secure file delivery
  *
- * FIXES APPLIED (v2):
+ * FIXES APPLIED (v3):
  *   [CRITICAL] Path traversal guard on productDir before fs.resolve()
- *   [HIGH]     require() calls moved from inside handlers to module top
- *   [MEDIUM]   Download counter increment moved inside transaction
+ *   [HIGH]     All requires moved from inside handlers to module top
+ *   [MEDIUM]   Download counter increment moved inside transaction / atomic check
  *   [LOW]      X-Request-Id included in error logs
- *   NOTE: Admin route moved to routes/admin.js (separation of concerns)
+ *   [FIX]      Expanded productId validation to accept alphanumeric strings, hyphens, and underscores (e.g., kubernetes-starter-pack)
  */
 
 'use strict';
@@ -18,7 +18,7 @@ const archiver = require('archiver');
 const Joi      = require('joi');
 
 // FIX [MEDIUM]: All requires at module top — never inside handlers
-const { getDb }           = require('../db/database');
+const { getDb }               = require('../db/database');
 const { generateDownloadToken, verifyDownloadToken, verifyLicenseKey } = require('../utils/licenseKey');
 const { downloadLimiter } = require('../middleware/rateLimiter');
 const PRODUCTS            = require('../data/products');
@@ -29,9 +29,9 @@ const router = express.Router();
 
 // ── Validation schemas ────────────────────────────────────────────────────────
 const verifySchema = Joi.object({
-  email:      Joi.string().email().trim().lowercase().max(254).required(),
-  licenseKey: Joi.string().pattern(/^SK-[A-Z0-9]+-[A-F0-9]{12}-[A-F0-9]{16}$/i).required(),
-  productId:  Joi.string().alphanum().max(64).required(),
+  email:        Joi.string().email().trim().lowercase().max(254).required(),
+  licenseKey:   Joi.string().pattern(/^SK-[A-Z0-9]+-[A-F0-9]{12}-[A-F0-9]{16}$/i).required(),
+  productId:    Joi.string().pattern(/^[a-zA-Z0-9_-]+$/).max(64).required(),
 });
 
 // ── POST /api/downloads/verify ────────────────────────────────────────────────
