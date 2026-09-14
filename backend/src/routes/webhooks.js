@@ -18,7 +18,7 @@
 const express  = require('express');
 const crypto   = require('crypto');
 const Joi      = require('joi');
-const { getDb }                     = require('../db/database');
+const { getDb }                    = require('../db/database');
 const { generateLicenseKey } = require('../utils/licenseKey');
 const { webhookLimiter }     = require('../middleware/rateLimiter');
 const PRODUCTS                     = require('../data/products');
@@ -96,9 +96,12 @@ router.post(
       }
 
       // ── PAYMENT SECURITY: Step 4 — Map to internal product ──────────────────
-      const productId = GUMROAD_PRODUCT_MAP[value.product_permalink] || GUMROAD_PRODUCT_MAP[value.product_id];
+      // FIX: Use product_permalink as the primary lookup. If a permalink is explicitly 
+      // sent but not found in the map, treat it as an unknown product rather than 
+      // falling back to product_id.
+      const productId = GUMROAD_PRODUCT_MAP[value.product_permalink];
       if (!productId) {
-        logger.warn('Webhook: unknown product permalink or ID', {
+        logger.warn('Webhook: unknown product permalink', {
           permalink: value.product_permalink,
           productId: value.product_id,
           saleId:    value.sale_id,

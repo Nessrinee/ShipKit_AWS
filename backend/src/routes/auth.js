@@ -30,7 +30,7 @@ const router = express.Router();
  * so every login attempt takes the same time regardless of whether
  * the email exists.
  */
-const DUMMY_HASH = '$2b$12$invalidhashfortimingprotect000000000000000000000000000';
+const DUMMY_HASH = '$2b$12$invalidhashfortimingprotectionxxxxxxxxxxxxxxxxxxxxxxxxx';
 
 // ── Validation schemas ────────────────────────────────────────────────────────
 const loginSchema = Joi.object({
@@ -54,17 +54,21 @@ router.post('/login', authLimiter, async (req, res, next) => {
       });
     }
 
-    const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+    const { email, password } = value;
 
-    // FIX [CRITICAL]: Always run bcrypt — prevents timing-based email enumeration
-    const hashToCompare = user ? user.password : DUMMY_HASH;
-    const passwordValid = await bcrypt.compare(value.password, hashToCompare);
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+    // SECURITY: Always run bcrypt regardless of whether user exists
+    // This prevents timing oracle attacks — response time is identical
+    // whether email exists or not
+    const passwordToCheck = user ? user.password : DUMMY_HASH;
+    const passwordMatch = await bcrypt.compare(password, passwordToCheck);
 
     // Unified error message — never reveal whether email vs password was wrong
-    if (!user || !passwordValid) {
+    if (!user || !passwordMatch) {
       logger.warn('Failed login attempt', {
-        email: value.email,
+        email,
         ip:    req.ip,
         reqId: req.id,
       });
@@ -91,12 +95,12 @@ router.post('/login', authLimiter, async (req, res, next) => {
 router.post('/refresh', authLimiter, (req, res, next) => {
   try {
     // FIX [LOW]: Validate shape before touching the token
-    const { error, value } = refreshSchema.validate(req.body);
+    const { error } = refreshSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: 'refreshToken is required' });
     }
 
-    const { valid, payload, error: jwtError } = verifyRefreshToken(value.refreshToken);
+    const { valid, payload, error: jwtError } = verifyRefreshToken(req.body.refreshToken);
     if (!valid) {
       logger.warn('Invalid refresh token attempt', {
         reason: jwtError,

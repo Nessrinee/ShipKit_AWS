@@ -28,7 +28,7 @@ router.use(requireAuth, requireAdmin);
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 const generateSchema = Joi.object({
-  productId:    Joi.string().alphanum().max(64).required(),
+  productId:    Joi.string().pattern(/^[a-zA-Z0-9_-]+$/).max(64).required(),
   email:        Joi.string().email().trim().lowercase().max(254).required(),
   maxDownloads: Joi.number().integer().min(1).max(50).default(config.license.maxDownloads),
   orderId:      Joi.string().max(128).optional(),  // optional manual order reference
