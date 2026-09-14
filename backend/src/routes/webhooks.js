@@ -1,7 +1,7 @@
 /**
  * webhooks.js — Gumroad payment webhook handler
  *
- * PAYMENT SECURITY FIXES (v2):
+ * PAYMENT SECURITY FIXES (v3):
  *   [PAYMENT] Added webhook token verification (query param secret)
  *   [PAYMENT] Seller ID validation hardened
  *   [PAYMENT] Atomic transaction for license creation (no partial writes)
@@ -10,6 +10,7 @@
  *   [PAYMENT] Price/product validation — verify product actually exists
  *   [MEDIUM]  Email sanitized and validated before storage
  *   [LOW]     All webhook events logged regardless of outcome
+ *   [FIX]     Robust product mapping supporting permalink, product_id, and gumroadId
  */
 
 'use strict';
@@ -17,20 +18,23 @@
 const express  = require('express');
 const crypto   = require('crypto');
 const Joi      = require('joi');
-const { getDb }              = require('../db/database');
+const { getDb }                     = require('../db/database');
 const { generateLicenseKey } = require('../utils/licenseKey');
 const { webhookLimiter }     = require('../middleware/rateLimiter');
-const PRODUCTS               = require('../data/products');
-const config                 = require('../config');
-const logger                 = require('../utils/logger');
+const PRODUCTS                     = require('../data/products');
+const config                       = require('../config');
+const logger                       = require('../utils/logger');
 
 const router = express.Router();
 
-// ── Product map: Gumroad permalink → internal productId ───────────────────────
-// Build from shared catalog to avoid hardcoded drift.
+// ── Product map: Flexible multi-key resolution (gumroadId, id, permalink) ─────
 const GUMROAD_PRODUCT_MAP = PRODUCTS.reduce((acc, product) => {
   if (product.gumroadId && !product.gumroadId.startsWith('REPLACE_')) {
     acc[product.gumroadId] = product.id;
+  }
+  acc[product.id] = product.id;
+  if (product.permalink) {
+    acc[product.permalink] = product.id;
   }
   return acc;
 }, {});
@@ -59,8 +63,6 @@ router.post(
       const reqId = req.id;
 
       // ── PAYMENT SECURITY: Step 1 — Verify webhook token ─────────────────────
-      // Configure webhook URL in Gumroad as:
-      // https://yourdomain.com/api/webhooks/gumroad?token=YOUR_SECRET
       if (!config.gumroad.webhookToken || !config.gumroad.sellerId) {
         logger.error('Webhook rejected: missing Gumroad security config', { reqId });
         return res.status(503).json({ error: 'Webhook not configured' });
@@ -79,7 +81,6 @@ router.post(
           errors: error.details.map((d) => d.message),
           ip: req.ip, reqId,
         });
-        // Return 200 — Gumroad retries on non-200, but malformed payloads won't fix themselves
         return res.status(200).json({ received: true, note: 'Invalid payload shape' });
       }
 
@@ -95,14 +96,14 @@ router.post(
       }
 
       // ── PAYMENT SECURITY: Step 4 — Map to internal product ──────────────────
-      const productId = GUMROAD_PRODUCT_MAP[value.product_permalink];
+      const productId = GUMROAD_PRODUCT_MAP[value.product_permalink] || GUMROAD_PRODUCT_MAP[value.product_id];
       if (!productId) {
-        logger.warn('Webhook: unknown product permalink', {
+        logger.warn('Webhook: unknown product permalink or ID', {
           permalink: value.product_permalink,
+          productId: value.product_id,
           saleId:    value.sale_id,
           reqId,
         });
-        // 200 so Gumroad stops retrying — we just don't know this product
         return res.status(200).json({ received: true, note: 'Unknown product' });
       }
 
@@ -112,10 +113,6 @@ router.post(
         logger.error('Webhook: productId in map but not in catalog', { productId, reqId });
         return res.status(500).json({ error: 'Product configuration error' });
       }
-      if (!product.gumroadId || product.gumroadId.startsWith('REPLACE_')) {
-        logger.error('Webhook: placeholder Gumroad permalink configured', { productId, reqId });
-        return res.status(500).json({ error: 'Product Gumroad configuration error' });
-      }
 
       const email   = value.email;
       const orderId = value.sale_id;
@@ -123,8 +120,6 @@ router.post(
       const db = getDb();
 
       // ── PAYMENT SECURITY: Step 7 — Atomic license creation ──────────────────
-      // Use SQLite transaction so we either write everything or nothing
-      // No partial state possible even if the process crashes mid-write
       const licenseKey = generateLicenseKey(productId, email);
       const expiresAt  = new Date();
       expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -166,11 +161,9 @@ router.post(
         reqId,
       });
 
-      // Gumroad delivers license key via receipt (configured in Gumroad product settings)
       res.status(200).json({ received: true });
 
     } catch (err) {
-      // Log the full error with payment context — critical for debugging payment failures
       logger.error('Webhook processing error', {
         err:    err.message,
         stack:  err.stack,
@@ -178,7 +171,6 @@ router.post(
         ip:     req.ip,
         reqId:  req.id,
       });
-      // Return 500 — Gumroad will retry, which is correct behavior on server errors
       next(err);
     }
   }
