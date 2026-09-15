@@ -9,6 +9,9 @@ on:
 
 # ── Jobs ──────────────────────────────────────────────────────
 jobs:
+  # ══════════════════════════════════════════
+  # JOB 1 — LINT
+  # ══════════════════════════════════════════
 
   lint:
     name: Lint
@@ -31,6 +34,9 @@ jobs:
         working-directory: backend
         run: npm run lint
 
+  # ══════════════════════════════════════════
+  # JOB 2 — Test
+  # ══════════════════════════════════════════
 
   test:
     name: Test
@@ -53,3 +59,36 @@ jobs:
       - name: Run test suite
         working-directory: backend
         run: npm test
+# ══════════════════════════════════════════
+# JOB 3 — Security
+# ══════════════════════════════════════════
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
