@@ -16,7 +16,7 @@
 'use strict';
 
 const express  = require('express');
-const crypto   = require('crypto');
+//const crypto   = require('crypto');
 const Joi      = require('joi');
 const { getDb }                    = require('../db/database');
 const { generateLicenseKey } = require('../utils/licenseKey');

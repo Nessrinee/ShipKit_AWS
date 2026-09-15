@@ -1,4 +1,4 @@
-const express  = require('express');
+const express = require('express');
 const PRODUCTS = require('../data/products');
 
 const router = express.Router();
@@ -24,7 +24,8 @@ router.get('/:slug', (req, res) => {
     return res.status(404).json({ error: 'Product not found' });
   }
 
-  const { productDir, ...safe } = product; // exclude internal productDir from response
+  // eslint-disable-next-line no-unused-vars
+  const { productDir: _productDir, ...safe } = product; // exclude internal productDir from response
   res.json({ product: safe });
 });
 

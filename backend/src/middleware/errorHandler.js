@@ -1,7 +1,10 @@
 const logger = require('../utils/logger');
 const config = require('../config');
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
+  // _next prefix tells ESLint: "I know this is unused — it's intentional"
+  // Required by Express to identify this as a 4-param error handler
+  // Without it, Express treats this as regular middleware — error handling breaks
   const status = err.status || err.statusCode || 500;
 
   logger.error({
