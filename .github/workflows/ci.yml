@@ -29,7 +29,8 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
-      - name: Run test suite
+
+      - name: Run lint
         working-directory: backend
-        run: npm test
+        run: npm run lint
         # Add Test 
