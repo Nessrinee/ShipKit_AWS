@@ -141,6 +141,27 @@ jobs:
           tags: shipkit-backend:pr-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Install Trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg -y
+
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
+            https://aquasecurity.github.io/trivy-repo/deb \
+            $(lsb_release -sc) main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+
+          sudo apt-get update
+          sudo apt-get install trivy -y
+      - name: Scan backend image with Trivy
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            shipkit-backend:pr-check
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
@@ -149,4 +170,11 @@ jobs:
           tags: shipkit-frontend:pr-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Scan frontend image with Trivy
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            shipkit-frontend:pr-check
 
