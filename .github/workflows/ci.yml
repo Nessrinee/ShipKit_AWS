@@ -131,16 +131,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: false
-          tags: shipkit-backend:pr-check
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
       - name: Install Trivy
         run: |
           sudo apt-get install wget apt-transport-https gnupg -y
@@ -155,6 +147,14 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install trivy -y
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: shipkit-backend:pr-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Scan backend image with Trivy
         run: |
           trivy image \
@@ -162,7 +162,7 @@ jobs:
             --ignore-unfixed \
             --exit-code 1 \
             shipkit-backend:pr-check
-      - name: Build frontend image
+      - name: Scan Build frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
@@ -170,7 +170,7 @@ jobs:
           tags: shipkit-frontend:pr-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Scan frontend image with Trivy
+      - name: Scan built frontend image with Trivy
         run: |
           trivy image \
             --severity HIGH,CRITICAL \
