@@ -139,6 +139,7 @@ jobs:
         with:
           context: ./backend
           push: false
+          load: true
           tags: shipkit-backend:pr-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -152,11 +153,12 @@ jobs:
           trivyignores: './backend/.trivyignore'
           exit-code: '1'
           format: 'table'
-      - name: Scan Build frontend image
+      - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: false
+          load: true
           tags: shipkit-frontend:pr-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
