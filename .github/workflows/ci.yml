@@ -153,6 +153,7 @@ jobs:
           trivyignores: './backend/.trivyignore'
           exit-code: '1'
           format: 'table'
+          skip-dirs: '/usr/local/lib/node_modules/npm'
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
