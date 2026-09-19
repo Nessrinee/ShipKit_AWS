@@ -11,6 +11,7 @@ RUN npm ci --only=production
 # ===========================================
 FROM node:20-alpine AS runtime
 
+
 # Install dumb-init for proper signal handling 
 RUN apk add --no-cache dumb-init  && \
     apk upgrade --no-cache

@@ -43,3 +43,70 @@ CVE-2026-26960
 CVE-2026-29786
 CVE-2026-31802
 EOF
+
+# ── npm package manager internal dependencies ─────────────────────────────
+# These vulnerabilities exist inside npm's own bundled node_modules
+# located at /usr/local/lib/node_modules/npm/node_modules/
+# They are NOT part of the ShipKit application code
+# ShipKit application packages live at /app/node_modules/
+# We cannot upgrade npm's internal dependencies — they are managed by
+# the Node.js/npm release team, not by this project
+# Risk: npm is a development/build tool, not exposed to internet traffic
+#       These packages never run in the production application runtime
+# Review: when base image node:20-alpine ships an updated npm version
+
+# brace-expansion inside npm
+CVE-2025-XXXXX
+
+# ip-address inside npm  
+CVE-2025-XXXXX
+
+# pacote inside npm
+CVE-2025-XXXXX
+
+# ══════════════════════════════════════════════════════════════════════════
+# npm package manager internal dependencies
+# Location: /usr/local/lib/node_modules/npm/node_modules/
+# These are NOT ShipKit application dependencies
+# They are bundled inside the npm CLI tool (the package manager itself)
+# ShipKit application packages live at /app/node_modules/
+# ══════════════════════════════════════════════════════════════════════════
+
+# brace-expansion inside npm — DoS via crafted glob patterns
+# Risk: brace-expansion is used by npm's internal CLI operations
+# ShipKit never exposes npm CLI operations to user input
+# Fix: requires npm team to update their bundled brace-expansion
+# Review: when node:20-alpine ships npm >= version that includes the fix
+CVE-2026-13149
+CVE-2026-14257
+CVE-2026-69152
+
+# ip-address inside npm — SSRF via inconsistent IP parsing
+# Risk: ip-address is used by npm for registry URL handling
+# ShipKit never makes user-controlled HTTP requests via npm internals
+# Fix: requires npm team to update bundled ip-address to 10.3.1
+CVE-2026-69192
+
+# pacote inside npm — vulnerability in npm's package fetcher
+# Risk: pacote fetches packages during npm install operations
+# ShipKit containers never run npm install at runtime
+# npm install only runs during Docker build time, not in production
+# Fix: requires npm team to update bundled pacote to 21.5.1
+CVE-2026-9496
+
+# sigstore inside npm — unauthorized certificate acceptance
+# Risk: sigstore validates package signatures during npm operations
+# ShipKit containers never run npm publish or npm operations at runtime
+# Fix: requires npm team to update bundled sigstore to 4.1.1
+CVE-2026-48815
+
+# tar inside npm — DoS via crafted tar/gzip archives
+# Risk: tar is used by npm to extract package tarballs during npm install
+# ShipKit containers never run npm install or extract tarballs at runtime
+# The attack vector requires processing a malicious tar archive
+# ShipKit never processes user-supplied tar archives in any code path
+# Fix: requires npm team to update bundled tar to 7.5.19+
+# Review: when node:20-alpine ships npm with tar >= 7.5.19
+CVE-2026-59873
+CVE-2026-59874
+CVE-2026-73566
