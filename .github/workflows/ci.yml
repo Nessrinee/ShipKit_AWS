@@ -85,6 +85,50 @@ jobs:
           path: backend/coverage/
           # Path relative to repo root — correct
           retention-days: 14
+      - name: Post coverage summary to PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'backend/coverage/coverage-summary.json';
+
+            if (!fs.existsSync(path)) {
+              console.log('No coverage summary found');
+              return;
+            }
+
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const total = summary.total;
+            const icon = pct => pct >= 80 ? '✅' : pct >= 60 ? '⚠️' : '❌';
+
+            const stmts  = total.statements.pct;
+            const branch = total.branches.pct;
+            const funcs  = total.functions.pct;
+            const lines  = total.lines.pct;
+
+            const body = [
+              '## 📊 Test Coverage Report',
+              '',
+              '| Metric | Coverage | Status |',
+              '|--------|----------|--------|',
+              `| Statements | ${stmts}%  | ${icon(stmts)}  |`,
+              `| Branches   | ${branch}% | ${icon(branch)} |`,
+              `| Functions  | ${funcs}%  | ${icon(funcs)}  |`,
+              `| Lines      | ${lines}%  | ${icon(lines)}  |`,
+              '',
+              stmts < 80
+                ? '> ⚠️ Coverage below 80% — consider adding tests'
+                : '> ✅ Coverage meets the 80% threshold',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
 
 # ══════════════════════════════════════════
 # JOB 3 — Security
