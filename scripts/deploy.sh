@@ -119,17 +119,7 @@ echo "✅ Deployment complete — image: ${IMAGE_TAG}"
 
 
 
-
-
-
-
-
-
-
-
-
-
-name: CD — Continuous Deployment
+ name: CD — Continuous Deployment
 
 on:
   push:
