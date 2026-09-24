@@ -1,11 +1,12 @@
 /**
  * database.js — SQLite initialization, migrations, and seeding
  *
- * FIXES APPLIED (v2):
+ * FIXES APPLIED (v3):
  *   [MEDIUM] Removed duplicate config2 import (was imported twice, named wrong)
  *   [PAYMENT] Added payment_events table for audit trail
- *   [LOW]    Added schema_migrations table for versioned migrations
- *   [LOW]    Admin seeding is idempotent (safe to run multiple times)
+ *   [LOW]     Added schema_migrations table for versioned migrations
+ *   [LOW]     Admin seeding is idempotent (safe to run multiple times)
+ *   [FIX]     Added products table to support runtime product seed/lookup in tests
  */
 
 'use strict';
@@ -16,6 +17,7 @@ const fs       = require('fs');
 const bcrypt   = require('bcryptjs');
 const config   = require('../config');   // FIX [MEDIUM]: single import at top — removed config2
 const logger   = require('../utils/logger');
+const PRODUCTS = require('../data/products');
 
 let db;
 
@@ -41,6 +43,7 @@ const initDb = () => {
   db.pragma('synchronous = NORMAL');  // Safe with WAL, better performance
 
   runMigrations();
+  seedProducts();
   seedAdminUser();
 
   logger.info('Database initialized', { path: dbPath });
@@ -51,7 +54,7 @@ const runMigrations = () => {
   // Create migrations tracker first
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
-      version    INTEGER PRIMARY KEY,
+      version     INTEGER PRIMARY KEY,
       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -65,12 +68,12 @@ const runMigrations = () => {
       version: 1,
       sql: `
         CREATE TABLE IF NOT EXISTS users (
-          id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-          email       TEXT UNIQUE NOT NULL COLLATE NOCASE,
-          password    TEXT NOT NULL,
-          role        TEXT NOT NULL DEFAULT 'admin',
-          created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+          id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+          email      TEXT UNIQUE NOT NULL COLLATE NOCASE,
+          password   TEXT NOT NULL,
+          role       TEXT NOT NULL DEFAULT 'admin',
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS licenses (
@@ -133,6 +136,19 @@ const runMigrations = () => {
           WHERE order_id IS NOT NULL;
       `,
     },
+    {
+      // Add products table for dynamic product seeding/lookup during tests
+      version: 4,
+      sql: `
+        CREATE TABLE IF NOT EXISTS products (
+          id         TEXT PRIMARY KEY,
+          name       TEXT NOT NULL,
+          permalink  TEXT UNIQUE NOT NULL,
+          price      INTEGER NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `,
+    },
   ];
 
   // Run each migration that hasn't been applied yet
@@ -146,6 +162,26 @@ const runMigrations = () => {
 
     logger.info(`Migration ${migration.version} applied`);
   }
+};
+
+const seedProducts = () => {
+  const insertProduct = db.prepare(`
+    INSERT OR IGNORE INTO products (id, name, permalink, price)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const seedTransaction = db.transaction(() => {
+    for (const product of PRODUCTS) {
+      insertProduct.run(
+        product.id,
+        product.name,
+        product.permalink || product.id,
+        product.price || 4900
+      );
+    }
+  });
+
+  seedTransaction();
 };
 
 // FIX [MEDIUM]: Uses single config import (was config2 — a stale duplicate)

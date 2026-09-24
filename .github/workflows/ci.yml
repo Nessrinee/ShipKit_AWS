@@ -1,0 +1,252 @@
+name: CI — Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    # Run CI on every PR targeting main
+    # This is what branch protection checks wait for
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  # we add permissions for PR to write comment in Covreage-Reports
+
+
+# ── Jobs ──────────────────────────────────────────────────────
+jobs:
+  # ══════════════════════════════════════════
+  # JOB 1 — LINT
+  # ══════════════════════════════════════════
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run lint
+        working-directory: backend
+        run: npm run lint
+
+  # ══════════════════════════════════════════
+  # JOB 2 — Test
+  # ══════════════════════════════════════════
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run test suite
+        working-directory: backend
+        run: npm test -- --coverage --coverageReporters=lcov
+        # Runs from: ~/shipkit/backend/ ✅
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-secret-not-real
+          JWT_REFRESH_SECRET: ci-test-refresh-not-real
+          LICENSE_SECRET: ci-test-license-not-real
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: TestPassword123!
+          CORS_ORIGIN: http://localhost:5173
+          DATABASE_PATH: ':memory:'
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ github.event.pull_request.number }}
+          path: backend/coverage/
+          # Path relative to repo root — correct
+          retention-days: 14
+      - name: Post coverage summary to PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'backend/coverage/coverage-summary.json';
+
+            if (!fs.existsSync(path)) {
+              console.log('No coverage summary found');
+              return;
+            }
+
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const total = summary.total;
+            const icon = pct => pct >= 80 ? '✅' : pct >= 60 ? '⚠️' : '❌';
+
+            const stmts  = total.statements.pct;
+            const branch = total.branches.pct;
+            const funcs  = total.functions.pct;
+            const lines  = total.lines.pct;
+
+            const body = [
+              '## 📊 Test Coverage Report',
+              '',
+              '| Metric | Coverage | Status |',
+              '|--------|----------|--------|',
+              `| Statements | ${stmts}%  | ${icon(stmts)}  |`,
+              `| Branches   | ${branch}% | ${icon(branch)} |`,
+              `| Functions  | ${funcs}%  | ${icon(funcs)}  |`,
+              `| Lines      | ${lines}%  | ${icon(lines)}  |`,
+              '',
+              stmts < 80
+                ? '> ⚠️ Coverage below 80% — consider adding tests'
+                : '> ✅ Coverage meets the 80% threshold',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+
+# ══════════════════════════════════════════
+# JOB 3 — Security
+# ══════════════════════════════════════════
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg -y
+
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
+            https://aquasecurity.github.io/trivy-repo/deb \
+            $(lsb_release -sc) main" \
+            | sudo tee /etc/apt/sources.list.d/trivy.list
+
+          sudo apt-get update
+          sudo apt-get install trivy -y
+      - name: Scan backend filesystem with Trivy
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            backend/
+
+      - name: Scan frontend filesystem with Trivy
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            frontend/
+# ══════════════════════════════════════════
+# JOB 4 — Build
+# ══════════════════════════════════════════
+  Build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [test,security]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: shipkit-backend:pr-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: 'shipkit-backend:pr-check'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          trivyignores: './backend/.trivyignore'
+          exit-code: '1'
+          format: 'table'
+          skip-dirs: '/usr/local/lib/node_modules/npm'
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: shipkit-frontend:pr-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: 'shipkit-frontend:pr-check'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          format: 'table'
+

@@ -1,7 +1,6 @@
 # 🚀 ShipKit v2 — Production-Hardened
 
-> **Audit version:** Full security audit + bug fixes applied by Senior Staff Engineer review.
-> **Previous version:** v1.0 (74/100) → **Current:** v2.0 (91/100)
+
 
 ---
 
