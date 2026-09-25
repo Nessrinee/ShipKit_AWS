@@ -38,3 +38,5 @@ jobs:
           role-to-assume: ${{secrets.AWS_ROLE_ARN}}
           aws-region: ${{env.AWS_REGION}}
           role-session-name: GitHubActions-ShipKit-${{ github.run_id }}
+      - name: Test AWS connection 
+        run: aws sts get-caller-identity
