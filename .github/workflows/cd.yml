@@ -49,3 +49,12 @@ jobs:
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           echo "version=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "Image tag: ${SHORT_SHA}"
+      - name: Verify AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: Verify ECR repositories
+        run: |
+          aws ecr describe-repositories \
+            --repository-names shipkit-backend shipkit-frontend \
+            --region ${{ env.AWS_REGION }}
