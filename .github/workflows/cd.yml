@@ -18,8 +18,10 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
 
-jobs:
 
+  # ── Jobs ──────────────────────────────────────────────────
+jobs:
+ # ── Job 1: Build and Push to ECR ────────────────────────────
   build-and-push:
     name: Build and Push
     runs-on: ubuntu-latest
@@ -50,8 +52,9 @@ jobs:
         id: meta
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          echo "version=${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "Image tag: ${SHORT_SHA}"
+          RUN_NUMBER=${{ github.run_number }}
+          echo "version=${SHORT_SHA}-${RUN_NUMBER}" >> $GITHUB_OUTPUT
+          echo "Building: ${SHORT_SHA}-${RUN_NUMBER}"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push backend
