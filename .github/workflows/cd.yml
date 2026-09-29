@@ -45,6 +45,7 @@ jobs:
           role-session-name: GitHubActions-ShipKit-${{ github.run_id }}
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
+        
       - name: Generate image tag from commit SHA 
         id: meta
         run: |
@@ -60,5 +61,15 @@ jobs:
           push: true
           tags: |
             ${{ env.ECR_REGISTRY }}/shipkit-backend:${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # I didn't commit yet the frontend
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/shipkit-frontend:${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
