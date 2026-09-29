@@ -1,11 +1,6 @@
 name: CD — Continuous Deployment
 
 on:
-  workflow_run:
-    workflows: ["CI — Continuous Integration"]
-    types:
-      - completed
-
   push:
     branches:
       - main
