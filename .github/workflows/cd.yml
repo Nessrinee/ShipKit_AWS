@@ -20,7 +20,8 @@ jobs:
   build-and-push:
     name: Build and Push
     runs-on: ubuntu-latest
-    environment: production
+    environment: 
+       name: production
 
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
@@ -30,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Test CD runner
         run: |
-          echo "CD workflow started"
+          echo "CD workflow started after PR approval and merge"
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
           echo "Repository: ${{ github.repository }}"
