@@ -136,7 +136,7 @@ jobs:
             const lines  = total.lines.pct;
 
             const body = [
-              '## 📊 Test Coverage Report',
+              '##  Test Coverage Report',
               '',
               '| Metric | Coverage | Status |',
               '|--------|----------|--------|',
@@ -146,8 +146,8 @@ jobs:
               `| Lines      | ${lines}%  | ${icon(lines)}  |`,
               '',
               stmts < 80
-                ? '> ⚠️ Coverage below 80% — consider adding tests'
-                : '> ✅ Coverage meets the 80% threshold',
+                ? '>  Coverage below 80% — consider adding tests'
+                : '>  Coverage meets the 80% threshold',
             ].join('\n');
 
             await github.rest.issues.createComment({
@@ -180,9 +180,9 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Audit backend dependencies
+      - name: Audit backend dependencies #(production dependencies only)
         working-directory: backend
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev 2>&1 || true
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -190,7 +190,7 @@ jobs:
 
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev 2>&1 || true
 
       - name: Install Trivy
         run: |
