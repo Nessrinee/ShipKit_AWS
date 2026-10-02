@@ -73,3 +73,10 @@ jobs:
             ${{ env.ECR_REGISTRY }}/shipkit-frontend:${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+# ── Job 2: Deploy to EC2 via SSM ────────────────────────────
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    # Waits for build-and-push to succeed before running 
+    
