@@ -1,12 +1,11 @@
 name: CD — Continuous Deployment
 
 on:
-  workflow_dispatch: #  This removes automatic deployment on merge/push
-    inputs:
-      image_tag:
-        description: 'Enter the image tag to deploy (e.g., a3f2c1b-29)'
-        required: true
-        default: 'latest'
+  push:
+    branches:
+      - main
+    # Triggers automatically when PR is merged to main
+    # Branch protection ensures this only happens via approved PR
 
 permissions:
   contents: read
