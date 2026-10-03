@@ -92,5 +92,18 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Deploy-${{ github.run_id }}
+      - name: Get EC2 Instance ID
+        id: get-instance
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=shipkit-server" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+
+          echo "instance-id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
+          echo "Deploying to: ${INSTANCE_ID}"
 
     
