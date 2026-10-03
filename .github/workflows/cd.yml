@@ -97,13 +97,18 @@ jobs:
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters \
-              "Name=tag:Name,Values=shipkit-server" \
+              "Name=tag:Name,Values=shipkit-ec2" \
               "Name=instance-state-name,Values=running" \
             --query "Reservations[0].Instances[0].InstanceId" \
             --output text \
             --region ${{ env.AWS_REGION }})
 
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+            echo "❌ EC2 instance 'shipkit-ec2' not found or not running"
+            exit 1
+          fi
+
           echo "instance-id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
           echo "Deploying to: ${INSTANCE_ID}"
 
-    
+      
