@@ -110,5 +110,22 @@ jobs:
 
           echo "instance-id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
           echo "Deploying to: ${INSTANCE_ID}"
+      - name: Deploy via SSM
+        id: ssm
+        run: | 
+         IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids ${{ steps.get-instance.outputs.instance-id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"/opt/shipkit/scripts/deploy.sh ${IMAGE_TAG}\"]" \
+            --comment "Deploy ${IMAGE_TAG} — ${{ github.actor }}" \
+            --timeout-seconds 300 \
+            --region ${{ env.AWS_REGION }} \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command-id=${COMMAND_ID}" >> $GITHUB_OUTPUT
+          echo "SSM Command: ${COMMAND_ID}"
 
       
