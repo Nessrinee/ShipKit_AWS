@@ -6,6 +6,12 @@ on:
       - main
     # Triggers automatically when PR is merged to main
     # Branch protection ensures this only happens via approved PR
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Override image tag (leave empty to use commit SHA)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
