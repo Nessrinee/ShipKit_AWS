@@ -12,7 +12,7 @@ IMAGE_TAG="${1:-latest}"
 REGION="eu-west-3"
 APP_DIR="/opt/shipkit"
 ENV_FILE="${APP_DIR}/.env"
-COMPOSE_FILE="${APP_DIR}/docker/docker-compose.prod.yml"
+COMPOSE_FILE="${APP_DIR}/docker/docker-compose-prod.yml"
 ECR_REGISTRY="818655836450.dkr.ecr.eu-west-3.amazonaws.com"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
