@@ -173,6 +173,34 @@ jobs:
                 ;;
             esac
             done
+      - name: Verify application health
+        run: |
+          INSTANCE_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=shipkit-ec2" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+
+          echo "Health check: http://${INSTANCE_IP}/api/health"
+
+          for i in $(seq 1 6); do
+            HTTP=$(curl -s -o /dev/null \
+              -w "%{http_code}" \
+              --max-time 10 \
+              "http://${INSTANCE_IP}/api/health" || echo "000")
+
+            if [ "$HTTP" = "200" ]; then
+              echo "✅ Application healthy"
+              echo "🚀 Live at: http://${INSTANCE_IP}"
+              exit 0
+            fi
+
+            echo "Attempt ${i}/6 — HTTP ${HTTP}"
+            sleep 10
+          done
+
+          echo "❌ Health check failed"
+          exit 1
 
 
       
