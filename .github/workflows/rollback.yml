@@ -1,0 +1,19 @@
+name: Rollback Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to roll back to (git commit SHA, e.g. a3f2c1b)'
+        required: true
+        type: string
+
+      reason:
+        description: 'Reason for rollback (for audit log)'
+        required: true
+        type: string
+
+      confirm:
+        description: 'Type ROLLBACK to confirm'
+        required: true
+        type: string
