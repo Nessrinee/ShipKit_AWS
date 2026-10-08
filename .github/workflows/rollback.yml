@@ -38,7 +38,7 @@ jobs:
           echo "Confirmation accepted"
       - name: Log rollback intent
         run: |
-         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "   ROLLBACK INITIATED"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "  Triggered by: ${{ github.actor }}"
@@ -46,3 +46,61 @@ jobs:
           echo "  Reason:       ${{ inputs.reason }}"
           echo "  Time:         $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 
+# ------------- Verify the image exists in ECR before touching EC2 --------------
+  verify-image:
+    name: Verify Image Exists in ECR 
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Rollback-Verify-${{ github.run_id }}
+          # Check Backend image 
+      - name: Check backend image exists in ECR
+        run: |
+            IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+
+            echo "Checking ECR for: shipkit-backend:${IMAGE_TAG}"
+
+            # Try to describe the image — fails if it doesn't exist
+            aws ecr describe-images \
+                --repository-name shipkit-backend \
+                --image-ids imageTag=${IMAGE_TAG} \
+                --region ${{ env.AWS_REGION }} \
+                --query "imageDetails[0].imageTags" \
+                --output text
+                if [ $? -ne 0 ]; then
+            echo " Image shipkit-backend:${IMAGE_TAG} not found in ECR"
+            echo "   Cannot rollback to a tag that doesn't exist"
+            echo "   Check available tags with:"
+            echo "   aws ecr list-images --repository-name shipkit-backend"
+            exit 1
+            fi
+            echo " Backend image confirmed in ECR: ${IMAGE_TAG}"
+
+        # Check frontend image 
+      - name: Check frontend image exists in ECR
+        run: |
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+
+          aws ecr describe-images \
+            --repository-name shipkit-frontend \
+            --image-ids imageTag=${IMAGE_TAG} \
+            --region ${{ env.AWS_REGION }} \
+            --query "imageDetails[0].imageTags" \
+            --output text
+
+          if [ $? -ne 0 ]; then
+            echo " Image shipkit-frontend:${IMAGE_TAG} not found in ECR"
+            exit 1
+          fi
+
+          echo " Frontend image confirmed in ECR: ${IMAGE_TAG}"
+        # This step is critical
+        # Rolling back to a non-existent tag = EC2 deploy fails
+        # We catch it HERE before touching production
+        # Fail fast at verification, not mid-deployment
