@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag to roll back to (git commit SHA, e.g. a3f2c1b)'
+        description: 'Image tag to roll back to (git commit SHA, a3f2c1b)'
         required: true
         type: string
 
@@ -17,3 +17,32 @@ on:
         description: 'Type ROLLBACK to confirm'
         required: true
         type: string
+
+jobs:
+
+  validate:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify confirmation word
+        run: |
+         if [ "${{ inputs.confirm }}" != "ROLLBACK" ]; then
+            echo "Confirmation failed"
+            echo "You typed: '${{ inputs.confirm }}'"
+            echo "Required: 'ROLLBACK'"
+            echo ""
+            echo "Rollback cancelled no changes made."
+            exit 1
+          fi
+          echo "Confirmation accepted"
+      - name: Log rollback intent
+        run: |
+         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "   ROLLBACK INITIATED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Triggered by: ${{ github.actor }}"
+          echo "  Target tag:   ${{ inputs.image_tag }}"
+          echo "  Reason:       ${{ inputs.reason }}"
+          echo "  Time:         $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" 
