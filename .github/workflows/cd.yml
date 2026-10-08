@@ -199,7 +199,7 @@ jobs:
             sleep 10
           done
 
-          echo "❌ Health check failed"
+          echo " Health check failed"
           exit 1
 
 
