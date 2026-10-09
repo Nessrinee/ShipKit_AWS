@@ -147,14 +147,16 @@ jobs:
         id: ssm
         run: |
           IMAGE_TAG="${{ github.event.inputs.image_tag }}"
-            --instance-ids ${{ steps.get-instance.outputs.instance-id }} \
+          
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.get-instance.outputs.instance-id }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"/opt/shipkit/scripts/deploy.sh ${IMAGE_TAG}\"
             ]" \
             --comment "ROLLBACK to ${IMAGE_TAG} — ${{ github.event.inputs.reason }}" \
             --timeout-seconds 300 \
-            --region ${{ env.AWS_REGION }} \
+            --region "${{ env.AWS_REGION }}" \
             --query "Command.CommandId" \
             --output text)
 
