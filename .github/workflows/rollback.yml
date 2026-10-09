@@ -245,4 +245,27 @@ jobs:
           echo "   Production may be in a degraded state"
           echo "   Check EC2 directly via SSM"
           exit 1
+# ── Audit summary ─────────────────────────────────────────────
+  audit:
+    name: Rollback Audit Log
+    runs-on: ubuntu-latest
+    needs: [validate, verify-image, rollback]
+    if: always()
+    # Runs regardless of success or failure
+    # Creates a permanent audit record in GitHub Actions
+
+    steps:
+      - name: Write audit record
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "   ROLLBACK AUDIT RECORD"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Result:      ${{ needs.rollback.result }}"
+          echo "  Triggered:   ${{ github.actor }}"
+          echo "  Target tag:  ${{ github.event.inputs.image_tag }}"
+          echo "  Reason:      ${{ github.event.inputs.reason }}"
+          echo "  Run ID:      ${{ github.run_id }}"
+          echo "  Run URL:     ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "  Timestamp:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
