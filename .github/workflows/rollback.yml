@@ -221,7 +221,7 @@ jobs:
       - name : Verify health after rollback 
         run: | 
           INSTANCE_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=shipkit-server" \
+            --filters "Name=tag:Name,Values=shipkit-ec2" \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text \
             --region ${{ env.AWS_REGION }})
