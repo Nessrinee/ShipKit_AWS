@@ -17,10 +17,9 @@ RUN npm run build
 # STAGE 2: Runtime — Nginx serves static files
 # ============================================
 FROM nginx:1.27-alpine AS runtime
-# Upgrade all Alpine packages to get latest security patches
-# Fixes: libxml2 CVE-2026-6732, musl CVE-2026-40200,
-#        nghttp2-libs CVE-2026-27135, zlib CVE-2026-22184
-RUN apk upgrade --no-cache
+
+# Upgrade all Alpine packages AND explicitly upgrade tiff to patch CVE-2026-4775
+RUN apk upgrade --no-cache && apk add --no-cache --upgrade tiff
 
 RUN rm /etc/nginx/conf.d/default.conf /etc/nginx/nginx.conf 2>/dev/null || true
 
