@@ -1,0 +1,94 @@
+- AccessConfig:
+    AuthenticationMode: API_AND_CONFIG_MAP
+    BootstrapClusterCreatorAdminPermissions: null
+  Arn: arn:aws:eks:eu-west-3:818655836450:cluster/shipkit-eks
+  CertificateAuthority:
+    Active:
+      ActivatedBy: EKS
+      Id: 0ab9f040-04bd-3668-8597-854ee4f39c6d
+    Data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURNVENDQWhtZ0F3SUJBZ0lRZmJ2UmVEcHpvODl3ZzlxajhSL29VVEFOQmdrcWhraUc5dzBCQVFzRkFEQW4KTVJBd0RnWURWUVFLRXdkQlYxTWdSVXRUTVJNd0VRWURWUVFERXdwcmRXSmxjbTVsZEdWek1CNFhEVEkyTVRBeApNVEV5TlRRd01Gb1hEVE14TVRBeE1ERXlOVFF3TUZvd0p6RVFNQTRHQTFVRUNoTUhRVmRUSUVWTFV6RVRNQkVHCkExVUVBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUIKQU4vOGNjRVZYTTlZVlM0LzQ0QmZWWFVUazNRT3BxcDdUd2FoM1h4bjI0cW4vQ0xRQ1hlZFZGL0hmVDF4TEt2RwpmdlJ4L0dadWJmQzVpRllmbktpTlI0TndyZ05abFk2d1VUZmZBSTlWeGcvbkdrNUdLbnY3UXVJR25YYWV5VXJVClhmdGtUUlBYMmRJUUZCSXExcXZBQlVvSFVOK2dsRmNrZ0FCY1FEQ3VYaW14R2JJK1U2dllhSTZxNXo0QmhtcVUKVXhzWnh0U0Q4ZFRLYi9FWXc1dmdIQ0tOR0txWjBrUnFOTFlaTDhkcUx2NnI0L3U4YVRnZVN2VWRnUDRRSlpxeApNbmt5eEZaL2VZL0VGdlQ4L1J0N3JXYkhCN1piL3NJTitlRjhMeEgxNW5LakZObmxNNFA5YVVycS82KzNYZWl6CjgyQ3VHbURhQUEyZ0dENHNCdGRORnFrQ0F3RUFBYU5aTUZjd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWQKRXdFQi93UUZNQU1CQWY4d0hRWURWUjBPQkJZRUZFM090cU0wQWhrUWh1NEZyak5VUktTL2pXR25NQlVHQTFVZApFUVFPTUF5Q0NtdDFZbVZ5Ym1WMFpYTXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBTnliQWpDOWFObWExcFFXCks5ZnV0d0dPaFRWUXdROXZ2dUMybUxSVWIvY0xqUG42M2UvdTlnWWwwNi9VL2VmeDRabUxUd1ZWeFVGalFydCsKNi96TkdRaG5udjh0eWtyYjcvbmI3SHZvYzR2bHJPeFI5Znp6OWx2bCs0YzRZREdVazE3TWNjY1RyMzU1aUxBVQoyM3Z4eFE2QWx5THhjUlVFNnlUWm9Mdm5OVnYwQkJFSXdwMHhxNXJYd0xJeUdyemMwcFNKNHhrN0w3SC94Z05pCm9Xc3JqQy9DRFNWS25HYUV0YTI3QW01T2cyVnljK1dheEQ5TVdtN3cyb09LdXUzWUhRcE9mYXhXVjBlVS9Kb1oKbWcxWmV4c1pNOHFpZVh5cUJJa2ZwbUd6cGhwTmw2MEcxWHVQR00rS3RXL1cxYjFheWllQTJrd1NBRTI4czl4QwpHeFovT2ZjPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  ClientRequestToken: null
+  ComputeConfig: null
+  ConnectorConfig: null
+  ControlPlaneScalingConfig:
+    Tier: standard
+  CreatedAt: "2026-10-11T12:53:48.474Z"
+  DeletionProtection: false
+  EncryptionConfig: null
+  Endpoint: https://33AA010ADFF540AD14CBE0D878D3A533.gr7.eu-west-3.eks.amazonaws.com
+  Health: null
+  Id: null
+  Identity:
+    Oidc:
+      Issuer: https://oidc.eks.eu-west-3.amazonaws.com/id/33AA010ADFF540AD14CBE0D878D3A533
+  KubeApiServerConfig:
+    EventTtl: 60m
+    ServiceNodePortRange:
+      MaxPort: 32767
+      MinPort: 30000
+  KubeControllerManagerConfig:
+    HorizontalPodAutoscalerControllerConfig:
+      HorizontalPodAutoscalerSyncPeriod: 15s
+    PodGcControllerConfig:
+      TerminatedPodGcThreshold: 12500
+  KubeSchedulerConfig:
+    NodeResourcesFit:
+      ScoringStrategy:
+        Resources:
+        - Name: cpu
+          Weight: 1
+        - Name: memory
+          Weight: 1
+        Type: LeastAllocated
+  KubernetesNetworkConfig:
+    ElasticLoadBalancing:
+      Enabled: false
+    IpFamily: ipv4
+    ServiceIpv4Cidr: 10.100.0.0/16
+    ServiceIpv6Cidr: null
+  Logging:
+    ClusterLogging:
+    - Enabled: false
+      Types:
+      - api
+      - audit
+      - authenticator
+      - controllerManager
+      - scheduler
+  Name: shipkit-eks
+  OutpostConfig: null
+  PlatformVersion: eks.34
+  RemoteNetworkConfig: null
+  ResourcesVpcConfig:
+    ClusterSecurityGroupId: sg-0ed1a35df0990b2af
+    ControlPlaneEgressMode: AWS_MANAGED
+    EndpointPrivateAccess: false
+    EndpointPublicAccess: true
+    PublicAccessCidrs:
+    - 0.0.0.0/0
+    SecurityGroupIds:
+    - sg-09bbcc73fde8551f7
+    SubnetIds:
+    - subnet-077bc14cedfd07747
+    - subnet-0c4fed6d2a3691a4f
+    - subnet-094e00f455e7d5888
+    - subnet-08047097f4980ae51
+    - subnet-09c88f951458e8033
+    - subnet-0e2a275986a67fd60
+    VpcId: vpc-001e66f23a502f46f
+  RoleArn: arn:aws:iam::818655836450:role/eksctl-shipkit-eks-cluster-ServiceRole-QYRwtPCQJyuP
+  Status: ACTIVE
+  StorageConfig: null
+  Tags:
+    Name: eksctl-shipkit-eks-cluster/ControlPlane
+    alpha.eksctl.io/cluster-name: shipkit-eks
+    alpha.eksctl.io/cluster-oidc-enabled: "false"
+    alpha.eksctl.io/eksctl-version: 0.231.0
+    aws:cloudformation:logical-id: ControlPlane
+    aws:cloudformation:stack-id: arn:aws:cloudformation:eu-west-3:818655836450:stack/eksctl-shipkit-eks-cluster/ba06afa0-c572-11f1-818f-0e8a517453df
+    aws:cloudformation:stack-name: eksctl-shipkit-eks-cluster
+    eksctl.cluster.k8s.io/v1alpha1/cluster-name: shipkit-eks
+  UpgradePolicy:
+    SupportType: EXTENDED
+  Version: "1.34"
+  ZonalShiftConfig: null
