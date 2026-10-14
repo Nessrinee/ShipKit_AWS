@@ -1,0 +1,16 @@
+apiVersion: v2
+name: shipkit
+description: |
+  ShipKit — production-grade digital product store
+  Node.js backend + React frontend on Amazon EKS
+type: application 
+version: 1.0.0
+appVersion: "2.0.0"
+keywords:
+  - shipkit
+  - nodejs
+  - react
+  - eks
+maintainers:
+  - name: Nessrinee
+    url: https://github.com/Nessrinee
