@@ -1,0 +1,52 @@
+#--------------- Global ---------------------------------
+global:
+  region: eu-west-3
+  accountId: "818655836450"
+  namespace: shipkit
+#--------------- ECR Registry --------------------------
+registry: 818655836450.dkr.ecr.eu-west-3.amazonaws.com
+#--------------- Backend image --------------------------
+backend:
+  image:
+  repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend
+  tag: latest
+  pullPolicy: Always #The node always contacts the registry to check the image's manifest digest. If a newer digest exists, it pulls the new image.
+  replicas: 2
+  port: 4000
+  env:
+    nodeEnv: production
+    adminEmail: admin@shipkit.dev
+    databasePath: /app/data/shipkit.db
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  serviceAccount: shipkit-backend-sa
+#---------------- Frontend image -------------------------
+frontend:
+  image:
+    repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-frontend
+    tag: latest
+    pullPolicy: Always
+  replicas: 2
+  port: 80
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "50m"
+    limits:
+      memory: "64Mi"
+      cpu: "250m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
