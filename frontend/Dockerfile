@@ -18,8 +18,9 @@ RUN npm run build
 # ============================================
 FROM nginx:1.27-alpine AS runtime
 
-# Upgrade all Alpine packages AND explicitly upgrade tiff to patch CVE-2026-4775
-RUN apk upgrade --no-cache && apk add --no-cache --upgrade tiff
+# Upgrade all Alpine system packages to patch vulnerabilities (including curl, libexpat, and tiff)
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache --upgrade tiff curl libexpat
 
 RUN rm /etc/nginx/conf.d/default.conf /etc/nginx/nginx.conf 2>/dev/null || true
 

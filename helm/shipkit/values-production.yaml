@@ -1,0 +1,33 @@
+# Production overrides only
+# Everything else inherited from values.yaml
+
+backend:
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+  # Production gets more resources than default values.yaml
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 10
+    # Production can scale higher than default
+
+frontend:
+  replicas: 2
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "100m"
+    limits:
+      memory: "128Mi"
+      cpu: "500m"
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+
+ingress:
+  scheme: internet-facing

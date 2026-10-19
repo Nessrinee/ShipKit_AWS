@@ -9,7 +9,10 @@ registry: 818655836450.dkr.ecr.eu-west-3.amazonaws.com
 backend:
   image:
   repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend
-  tag: latest
+  tag: ""
+    # Tag intentionally empty must be provided at deploy time
+    # helm upgrade --install ... --set backend.image.tag=e752253-29
+    # Never hardcode a tag here
   pullPolicy: Always #The node always contacts the registry to check the image's manifest digest. If a newer digest exists, it pulls the new image.
   replicas: 2
   port: 4000
@@ -34,7 +37,8 @@ backend:
 frontend:
   image:
     repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-frontend
-    tag: latest
+    tag: ""
+    # Same tag injected at deploy time by CI/CD
     pullPolicy: Always
   replicas: 2
   port: 80

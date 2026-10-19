@@ -26,3 +26,14 @@ app: shipkit-frontend
 app.kubernetes.io/name: shipkit-frontend
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/* Validate required values at render time */}}
+
+{{- define "shipkit.validateValues" -}}
+{{- if not .Values.backend.image.tag -}}
+{{- fail "backend.image.tag is required. Pass it via --set backend.image.tag=YOUR_TAG" -}}
+{{- end -}}
+{{- if not .Values.frontend.image.tag -}}
+{{- fail "frontend.image.tag is required. Pass it via --set frontend.image.tag=YOUR_TAG" -}}
+{{- end -}}
+{{- end -}}
