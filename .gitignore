@@ -91,3 +91,7 @@ coverage/
 tmp/
 temp/
 .vercel
+# ── Custom / Local Files — NEVER commit ────────
+iam_policy.json
+external-secrets-values-backup.yaml
+helm/shipkit/.helmignore
