@@ -54,6 +54,7 @@ frontend:
     minReplicas: 2
     maxReplicas: 4
     targetCPUUtilizationPercentage: 70
+
 #---------------- Ingress (ALB) -------------------------
 ingress:
   enabled: true
@@ -61,8 +62,9 @@ ingress:
   targetType: ip
   listenPorts: '[{"HTTP": 80}]'
   healthcheckPath: /api/health
+
 #---------------- Secrets (External Secrets Operator) -------------------------
-  externalSecrets:
+externalSecrets:
   refreshInterval: 1h
   parameterStorePath: /shipkit/prod
   serviceAccount:
