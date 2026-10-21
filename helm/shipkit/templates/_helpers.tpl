@@ -27,13 +27,16 @@ app.kubernetes.io/name: shipkit-frontend
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/* Validate required values at render time */}}
 
+{{/* Validate required values at render time */}}
 {{- define "shipkit.validateValues" -}}
-{{- if not .Values.backend.image.tag -}}
-{{- fail "backend.image.tag is required. Pass it via --set backend.image.tag=YOUR_TAG" -}}
+{{- $backendTag := .Values.backend.image.tag | default "" -}}
+{{- if not (regexMatch "^[a-fA-F0-9]{7}-[0-9]+$" $backendTag) -}}
+{{- fail "backend.image.tag must match SHA7-BUILD format, e.g. e639c8a-76" -}}
 {{- end -}}
-{{- if not .Values.frontend.image.tag -}}
-{{- fail "frontend.image.tag is required. Pass it via --set frontend.image.tag=YOUR_TAG" -}}
+
+{{- $frontendTag := .Values.frontend.image.tag | default "" -}}
+{{- if not (regexMatch "^[a-fA-F0-9]{7}-[0-9]+$" $frontendTag) -}}
+{{- fail "frontend.image.tag must match SHA7-BUILD format, e.g. e639c8a-76" -}}
 {{- end -}}
 {{- end -}}
