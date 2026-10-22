@@ -101,9 +101,6 @@ app.use(morgan(config.isProd ? 'combined' : 'dev', {
 // 16KB is more than enough for any legitimate API request
 app.use(express.json({ limit: '16kb' }));
 
-// ── Global rate limiter (all /api/* routes) ───────────────────────────────────
-app.use('/api/', globalLimiter);
-
 // ── Health check (no auth needed) ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -114,6 +111,9 @@ app.get('/api/health', (req, res) => {
     reqId:       req.id,
   });
 });
+
+// ── Global rate limiter (all /api/* routes) ───────────────────────────────────
+app.use('/api/', globalLimiter);
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes);
