@@ -33,13 +33,13 @@ containers:
       - containerPort: 4000
     env: #Environment Variables
       - name: NODE_ENV
-        value: production
-      - name: PORT
+        value: {{ .Values.backend.env.nodeEnv | quote }}
+      - name: {{ .Values.backend.port | quote }}
         value: "4000"
       - name: DATABASE_PATH
-        value: /app/data/shipkit.db
+        value: {{ .Values.backend.env.databasePath | quote }}
       - name: ADMIN_EMAIL
-        value: admin@shipkit.dev
+        value: {{ .Values.backend.env.adminEmail | quote }}
     envFrom:
       - secretRef:
           name: shipkit-secrets
@@ -52,7 +52,7 @@ containers:
       initialDelaySeconds: 15
       periodSeconds: 30
       failureThreshold: 3
-    readinessProbe: #health checking mechanisms used by Kubernetes to manage the lifecycle, availability, and self-healing behavior of your containers
+    readinessProbe: #a health check in Kubernetes that determines whether a container is ready to accept network traffic.
       httpGet:
         path: /api/health
         port: 4000
