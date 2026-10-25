@@ -12,54 +12,75 @@ spec:
     matchLabels:
       {{- include "shipkit.backend.selectorLabels" . | nindent 6 }}
 
-#Deployment strategy RollingUpdate:allows a Deployment update to take place with zero downtime
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxUnavailable: 0
-    maxSurge: 1 #specify the maximum number of extra Pods
-template:
-  metadata:
-    labels:
-      {{- include "shipkit.backend.selectorLabels" . | nindent 8 }}
-  spec:
-    serviceAccountName: {{ .Values.backend.serviceAccount }}
+  # Deployment strategy RollingUpdate: allows a Deployment update to take place with zero downtime
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1 # Specifies the maximum number of extra Pods during an update
 
-containers:
-  - name: backend
-    image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
-    imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
-    ports:
-      - containerPort: 4000
-    env: #Environment Variables
-      - name: NODE_ENV
-        value: {{ .Values.backend.env.nodeEnv | quote }}
-      - name: {{ .Values.backend.port | quote }}
-        value: "4000"
-      - name: DATABASE_PATH
-        value: {{ .Values.backend.env.databasePath | quote }}
-      - name: ADMIN_EMAIL
-        value: {{ .Values.backend.env.adminEmail | quote }}
-    envFrom:
-      - secretRef:
-          name: shipkit-secrets
-    resources:
-      {{- toYaml .Values.backend.resources | nindent 12 }}
-    livenessProbe: #health checking mechanisms used by Kubernetes to manage the lifecycle, availability, and self-healing behavior of your containers
-      httpGet:
-        path: /api/health
-        port: 4000
-      initialDelaySeconds: 15
-      periodSeconds: 30
-      failureThreshold: 3
-    readinessProbe: #a health check in Kubernetes that determines whether a container is ready to accept network traffic.
-      httpGet:
-        path: /api/health
-        port: 4000
-      initialDelaySeconds: 10
-      periodSeconds: 10
-      failureThreshold: 3
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1001
-      allowPrivilegeEscalation: false
+  # Pod template: defines the labels and specification of the Pods managed by this Deployment
+  template:
+    metadata:
+      labels:
+        {{- include "shipkit.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      # Service account used by the backend Pods to access authorized Kubernetes or AWS resources
+      serviceAccountName: {{ .Values.backend.serviceAccount }}
+
+      # Containers: defines the application container and its runtime configuration
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+
+          # Exposes the backend application port inside the container
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+              protocol: TCP
+
+          # Environment variables: configure the backend application at runtime
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.backend.env.nodeEnv | quote }}
+            - name: PORT
+              value: {{ .Values.backend.port | quote }}
+            - name: DATABASE_PATH
+              value: {{ .Values.backend.env.databasePath | quote }}
+            - name: ADMIN_EMAIL
+              value: {{ .Values.backend.env.adminEmail | quote }}
+
+          # Loads non-sensitive configuration and sensitive values from Kubernetes resources
+          envFrom:
+            - configMapRef:
+                name: shipkit-config
+            - secretRef:
+                name: shipkit-secrets
+
+          # Resource requests and limits: define the CPU and memory allocated to the container
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+
+          # Liveness probe: checks whether the application is alive; Kubernetes restarts it if it fails repeatedly
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+
+          # Readiness probe: checks whether the application is ready to receive traffic
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+
+          # Security context: runs the container as a non-root user and prevents privilege escalation
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false

@@ -4,23 +4,26 @@ global:
   accountId: "818655836450"
   namespace: shipkit
 #--------------- ECR Registry --------------------------
-registry: 818655836450.dkr.ecr.eu-west-3.amazonaws.com
+registry: 818655836450.dkr.ecr.eu-west-3.amazonaws.com  
 #--------------- Backend image --------------------------
 backend:
   image:
-  repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend
-  tag: ""
-    # Tag intentionally empty must be provided at deploy time
+    repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend
+    tag: ""
+    # Tag intentionally empty; must be provided at deploy time
     # helm upgrade --install ... --set backend.image.tag=e752253-29
     # Never hardcode a tag here
-  pullPolicy: Always #The node always contacts the registry to check the image's manifest digest. If a newer digest exists, it pulls the new image.
+    pullPolicy: Always #The node always contacts the registry to check the image's manifest digest. If a newer digest exists, it pulls the new image
+
   replicas: 2
   port: 4000
+
   env:
     nodeEnv: production
     adminEmail: admin@shipkit.dev
     databasePath: /app/data/shipkit.db
     corsOrigin: ""
+
   resources:
     requests:
       memory: "128Mi"
@@ -28,11 +31,13 @@ backend:
     limits:
       memory: "256Mi"
       cpu: "500m"
+
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 6
     targetCPUUtilizationPercentage: 70
+
   serviceAccount: shipkit-backend-sa
 #---------------- Frontend image -------------------------
 frontend:
