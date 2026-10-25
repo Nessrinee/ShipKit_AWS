@@ -1,122 +1,98 @@
 #!/usr/bin/env bash
+# =============================================================
+# ShipKit EKS Deploy Script
+# Called by: GitHub Actions CD pipeline
+# Usage: deploy.sh <IMAGE_TAG>
+# Example: deploy.sh e752253-29
+# =============================================================
+
 set -euo pipefail
 
-# ── Accept image tag from GitHub Actions via SSM ──────────────
-# Called by SSM as: deploy.sh <IMAGE_TAG>
-# Example: deploy.sh 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend:a3f2c1b
+IMAGE_TAG="${1:-}"
 
-IMAGE_TAG="${1:-latest}"
-# If no argument passed → fall back to latest
-# In production: GitHub Actions always passes the exact SHA tag
-
+if [ -z "$IMAGE_TAG" ]; then
+  echo " IMAGE_TAG is required"
+  echo "   Usage: $0 <image-tag>"
+  exit 1
+fi
 REGION="eu-west-3"
-APP_DIR="/opt/shipkit"
-ENV_FILE="${APP_DIR}/.env"
-COMPOSE_FILE="${APP_DIR}/docker/docker-compose-prod.yml"
-ECR_REGISTRY="818655836450.dkr.ecr.eu-west-3.amazonaws.com"
+CLUSTER_NAME="shipkit-eks"
+NAMESPACE="shipkit"
+HELM_CHART_PATH="./helm/shipkit"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  ShipKit Deploy — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "  ShipKit EKS Deploy"
 echo "  Image tag: ${IMAGE_TAG}"
+echo "  Cluster:   ${CLUSTER_NAME}"
+echo "  Namespace: ${NAMESPACE}"
+echo "  Time:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── Step 1: Authenticate Docker to ECR ────────────────────────
-echo "[1/6] Authenticating to ECR..."
-aws ecr get-login-password --region ${REGION} \
-  | docker login \
-    --username AWS \
-    --password-stdin \
-    ${ECR_REGISTRY}
+# ── Step 1: Update kubeconfig ─────────────────────────────────
+echo "[1/4] Configuring kubectl for EKS..."
+aws eks update-kubeconfig \
+  --name ${CLUSTER_NAME} \
+  --region ${REGION}
+echo "      ✅ kubectl configured"
+# ── Step 2: Verify cluster connectivity ───────────────────────
+echo "[2/4] Verifying cluster connectivity..."
+kubectl cluster-info --request-timeout=10s > /dev/null
+echo "      ✅ Cluster reachable"
+# ── Step 3: Deploy with Helm ──────────────────────────────────
+echo "[3/4] Deploying with Helm..."
+helm upgrade --install shipkit ${HELM_CHART_PATH} \
+  --namespace ${NAMESPACE} \
+  --create-namespace \
+  -f ${HELM_CHART_PATH}/values-production.yaml \
+  --set backend.image.tag=${IMAGE_TAG} \
+  --set frontend.image.tag=${IMAGE_TAG} \
+  --atomic \
+  --timeout 5m \
+  --wait
+# --atomic:  if deploy fails → automatic rollback to previous release
+# --wait:    wait until all pods pass readiness probes
+# --timeout: give pods 5 minutes to become healthy
 
-# ── Step 2: Export image tag for docker compose ───────────────
-echo "[2/6] Setting image tag: ${IMAGE_TAG}"
-export BACKEND_IMAGE="${ECR_REGISTRY}/shipkit-backend:${IMAGE_TAG}"
-export FRONTEND_IMAGE="${ECR_REGISTRY}/shipkit-frontend:${IMAGE_TAG}"
+echo "       Helm release deployed"
 
-# ── Step 3: Fetch secrets from Parameter Store ────────────────
-echo "[3/6] Fetching secrets from Parameter Store..."
-JWT_SECRET=$(aws ssm get-parameter \
-  --name "/shipkit/prod/jwt-secret" \
-  --with-decryption \
-  --region ${REGION} \
-  --query "Parameter.Value" \
-  --output text)
+# ── Step 4: Verify deployment ─────────────────────────────────
+echo "[4/4] Verifying deployment..."
+# Show pod status
+kubectl get pods -n ${NAMESPACE}
 
-JWT_REFRESH_SECRET=$(aws ssm get-parameter \
-  --name "/shipkit/prod/jwt-refresh-secret" \
-  --with-decryption \
-  --region ${REGION} \
-  --query "Parameter.Value" \
-  --output text)
+# Show Helm release history
+helm history shipkit -n ${NAMESPACE} --max 5
 
-LICENSE_SECRET=$(aws ssm get-parameter \
-  --name "/shipkit/prod/license-secret" \
-  --with-decryption \
-  --region ${REGION} \
-  --query "Parameter.Value" \
-  --output text)
+# Get ALB DNS for health check
+ALB_DNS=$(kubectl get ingress shipkit-ingress \
+  -n ${NAMESPACE} \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
 
-ADMIN_PASSWORD=$(aws ssm get-parameter \
-  --name "/shipkit/prod/admin-password" \
-  --with-decryption \
-  --region ${REGION} \
-  --query "Parameter.Value" \
-  --output text)
+if [ -n "$ALB_DNS" ]; then
+  echo "      Checking health at: http://${ALB_DNS}/api/health"
+  for i in $(seq 1 6); do
+    HTTP=$(curl -s -o /dev/null \
+      -w "%{http_code}" \
+      --max-time 10 \
+      "http://${ALB_DNS}/api/health" || echo "000")
 
-GUMROAD_WEBHOOK_TOKEN=$(aws ssm get-parameter \
-  --name "/shipkit/prod/gumroad-webhook-token" \
-  --with-decryption \
-  --region ${REGION} \
-  --query "Parameter.Value" \
-  --output text)
+    if [ "$HTTP" = "200" ]; then
+      echo "      ✅ Application healthy"
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "  ✅ Deployment complete!"
+      echo "  Image:    ${IMAGE_TAG}"
+      echo "  App URL:  http://${ALB_DNS}"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      exit 0
+    fi
 
-# ── Step 4: Write .env file ───────────────────────────────────
-echo "[4/6] Writing environment file..."
-cat > ${ENV_FILE} << EOF
-NODE_ENV=production
-PORT=4000
-DATABASE_PATH=/app/data/shipkit.db
-PRODUCTS_PATH=/app/products
-ADMIN_EMAIL=admin@shipkit.dev
-CORS_ORIGIN=http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-JWT_SECRET=${JWT_SECRET}
-JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-LICENSE_SECRET=${LICENSE_SECRET}
-ADMIN_PASSWORD=${ADMIN_PASSWORD}
-GUMROAD_WEBHOOK_TOKEN=${GUMROAD_WEBHOOK_TOKEN}
-BACKEND_IMAGE=${BACKEND_IMAGE}
-FRONTEND_IMAGE=${FRONTEND_IMAGE}
-EOF
-chmod 600 ${ENV_FILE}
-
-# ── Step 5: Deploy ────────────────────────────────────────────
-echo "[5/6] Deploying containers..."
-docker compose \
-  -f ${COMPOSE_FILE} \
-  --env-file ${ENV_FILE} \
-  up -d --remove-orphans --pull always
-
-# ── Step 6: Health check ──────────────────────────────────────
-echo "[6/6] Verifying health..."
-MAX_WAIT=60
-WAITED=0
-until docker inspect shipkit-backend \
-  --format='{{.State.Health.Status}}' 2>/dev/null \
-  | grep -q "healthy"; do
-  sleep 3
-  WAITED=$((WAITED + 3))
-  if [ ${WAITED} -ge ${MAX_WAIT} ]; then
-    echo "Health check timed out"
-    docker compose -f ${COMPOSE_FILE} logs backend
-    exit 1
-  fi
-done
-
-echo "✅ Deployment complete — image: ${IMAGE_TAG}"
-
-
-
-
-
-
- 
+    echo "      Attempt ${i}/6 — HTTP ${HTTP}"
+    sleep 10
+  done
+  echo "       Health check failed after 60 seconds"
+  exit 1
+else
+  echo "        ALB not ready yet  check ingress status manually"
+  echo "      kubectl get ingress -n ${NAMESPACE}"
+fi
