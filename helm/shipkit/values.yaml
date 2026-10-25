@@ -20,6 +20,7 @@ backend:
     nodeEnv: production
     adminEmail: admin@shipkit.dev
     databasePath: /app/data/shipkit.db
+    corsOrigin: ""
   resources:
     requests:
       memory: "128Mi"

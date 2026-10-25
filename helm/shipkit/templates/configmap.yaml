@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipkit-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "shipkit.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.backend.env.nodeEnv | quote }}
+  PORT: {{ .Values.backend.port | quote }}
+  DATABASE_PATH: {{ .Values.backend.env.databasePath | quote }}
+  ADMIN_EMAIL: {{ .Values.backend.env.adminEmail | quote }}
+  CORS_ORIGIN: {{ .Values.backend.env.corsOrigin | quote }}
+  PRODUCTS_PATH: {{ .Values.backend.env.productsPath | quote }}
