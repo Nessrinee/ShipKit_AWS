@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shipkit-frontend-netpol
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "shipkit.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: shipkit-frontend
+  policyTypes:
+    - Ingress 
+    - Egress #controls outbound traffic from your pods
+  ingress:
+    - {}
+    # Frontend accepts traffic from anywhere
+    # (ALB sends traffic to it from the internet)
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: shipkit-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Frontend can only reach: backend pods + DNS
+    # Cannot reach any other pod or external service

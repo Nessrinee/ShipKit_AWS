@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shipkit-backend-netpol
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "shipkit.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: shipkit-backend
+  policyTypes:
+    - Ingress #controls outbound traffic from your pods
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: shipkit-frontend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+    # Backend only accepts traffic from frontend pods
+    # Nothing else can reach it  not even other pods in the namespace
+  egress:
+    - {}
+    # Backend can reach anything outbound
+    # (needs to reach AWS services: ECR, SSM, CloudWatch)
