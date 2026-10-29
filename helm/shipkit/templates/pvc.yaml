@@ -9,7 +9,7 @@ spec:
   accessModes:
     - ReadWriteOnce
     # ReadWriteOnce = one pod can read and write at a time
-  storageClassName: gp2
+  storageClassName: gp2-csi
   resources:
     requests:
       storage: {{ .Values.backend.persistence.size }}
