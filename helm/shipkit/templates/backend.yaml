@@ -27,13 +27,26 @@ spec:
     spec:
       # Service account used by the backend Pods to access authorized Kubernetes or AWS resources
       serviceAccountName: {{ .Values.backend.serviceAccount }}
-
+      nodeSelector:
+        {{- toYaml .Values.backend.nodeSelector | nindent 8 }}
       # Containers: defines the application container and its runtime configuration
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
-
+          volumeMounts:
+            {{- if .Values.backend.persistence.enabled }}
+            - name: shipkit-db
+              mountPath: {{ .Values.backend.persistence.mountPath }}
+              # Mounts EBS volume at /app/data
+              # SQLite writes /app/data/shipkit.db → goes to EBS
+            {{- end }}
+      volumes:
+        {{- if .Values.backend.persistence.enabled }}
+        - name: shipkit-db
+          persistentVolumeClaim:
+            claimName: shipkit-db-pvc
+        {{- end }}
           # Exposes the backend application port inside the container
           ports:
             - containerPort: {{ .Values.backend.port }}

@@ -121,15 +121,15 @@ app.use('/api/products',  productRoutes);
 app.use('/api/downloads', downloadRoutes);
 app.use('/api/webhooks',  webhookRoutes);
 app.use('/api/contact',   contactRoutes);
-app.use('/api/admin',     adminRoutes);   // FIX [HIGH]: admin routes at separate prefix
+app.use('/api/admin',     adminRoutes);   //FIX [HIGH]: admin routes at separate prefix
 
 // ── Frontend static (production) ─────────────────────────────────────────────
-if (config.isProd) {
-  const path = require('path');
-  const frontendDist = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(frontendDist));
-  app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
-}
+//if (config.isProd) {
+  //const path = require('path');
+  //const frontendDist = path.join(__dirname, '../../frontend/dist');
+  //app.use(express.static(frontendDist));
+  //app.get('*', (req, res) => res.sendFile(path.join(frontendDist, 'index.html')));
+//}
 
 // ── Error handlers ────────────────────────────────────────────────────────────
 app.use(notFound);
