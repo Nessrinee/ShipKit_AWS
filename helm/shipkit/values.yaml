@@ -7,6 +7,16 @@ global:
 registry: 818655836450.dkr.ecr.eu-west-3.amazonaws.com  
 #--------------- Backend image --------------------------
 backend:
+  nodeSelector:
+    topology.kubernetes.io/zone: eu-west-3a
+  # Force backend pod to always run in eu-west-3a
+  # EBS volume will be created in eu-west-3a
+  # Pod and volume always in same AZ
+  persistence:
+    enabled: true
+    size: 5Gi
+    mountPath: /app/data
+    #This is where SQLite writes: /app/data/shipkit.db
   image:
     repository: 818655836450.dkr.ecr.eu-west-3.amazonaws.com/shipkit-backend
     tag: ""
@@ -71,6 +81,7 @@ ingress:
 
 #---------------- Secrets (External Secrets Operator) -------------------------
 externalSecrets:
+  enabled: true
   refreshInterval: 1h
   parameterStorePath: /shipkit/prod
   serviceAccount:

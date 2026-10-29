@@ -2,7 +2,9 @@
 # Everything else inherited from values.yaml
 
 backend:
-  replicas: 2
+  replicas: 1
+  # SQLite supports one writer only
+  # Cannot run multiple backend replicas with shared SQLite
   resources:
     requests:
       memory: "256Mi"
@@ -12,8 +14,11 @@ backend:
       cpu: "1000m"
   # Production gets more resources than default values.yaml
   autoscaling:
-    minReplicas: 2
-    maxReplicas: 10
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 1
+    # HPA disabled for backend with SQLite
+    # Enable only after migrating to PostgreSQL
     # Production can scale higher than default
 
 frontend:
@@ -26,6 +31,7 @@ frontend:
       memory: "128Mi"
       cpu: "500m"
   autoscaling:
+    enabled: true
     minReplicas: 2
     maxReplicas: 6
 
