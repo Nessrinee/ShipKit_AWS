@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shipkit-db-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "shipkit.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+    # ReadWriteOnce = one pod can read and write at a time
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.size }}
+    # Requests an EBS volume of this size
+    # AWS creates the EBS volume automatically when pod first starts
