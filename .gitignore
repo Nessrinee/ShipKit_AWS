@@ -95,3 +95,6 @@ temp/
 iam_policy.json
 external-secrets-values-backup.yaml
 helm/shipkit/.helmignore
+
+# SQLite test artifacts
+backend/:memory:*
