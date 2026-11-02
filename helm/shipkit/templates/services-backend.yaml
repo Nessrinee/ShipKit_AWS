@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
+  #health check behavior , and ready to receive traffic
     alb.ingress.kubernetes.io/healthcheck-path: /api/health
   name: shipkit-backend
   namespace: {{ .Values.global.namespace }}
