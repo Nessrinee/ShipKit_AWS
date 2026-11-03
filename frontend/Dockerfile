@@ -1,7 +1,7 @@
 # ============================================
 # STAGE 1: Builder — build the React app
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npm run build
 # ============================================
 # STAGE 2: Runtime — Nginx serves static files
 # ============================================
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.30-alpine3.24 AS runtime
 
 # Upgrade all Alpine system packages to patch vulnerabilities (including curl, libexpat, and tiff)
 RUN apk update && apk upgrade --no-cache && \
