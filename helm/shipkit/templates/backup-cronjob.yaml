@@ -1,0 +1,130 @@
+#Enable or disable the database backup CronJob.
+#If backup.enabled is false, Helm will not create this resource
+{{- if .Values.backup.enabled }}
+
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  # Name of the Kubernetes CronJob.
+  name: shipkit-db-backup
+
+  # Namespace where the CronJob will be deployed.
+  namespace: {{ .Values.global.namespace }}
+
+  # Apply the common labels defined in the Shipkit Helm chart.
+  labels:
+    {{- include "shipkit.labels" . | nindent 4 }}
+
+spec:
+  # Define when the backup should run using a Cron expression.
+  # Example: "0 2 * * *" means every day at 02:00 UTC.
+  schedule: {{ .Values.backup.schedule | quote }}
+
+  # Prevent a new backup Job from starting while a previous one is still running.
+  # This avoids multiple backup processes running simultaneously.
+  concurrencyPolicy: Forbid
+
+  # Keep the last 3 successfully completed Jobs for monitoring and troubleshooting.
+  successfulJobsHistoryLimit: 3
+
+  # Keep the last 3 failed Jobs to help investigate backup failures.
+  failedJobsHistoryLimit: 3
+
+  # Define the Job that Kubernetes will create each time the schedule is triggered.
+  jobTemplate:
+    spec:
+
+      # Define the Pod template that will execute the backup process.
+      template:
+        spec:
+
+          # Use the backend Kubernetes ServiceAccount.
+          # This ServiceAccount is associated with an AWS IAM Role through IRSA.
+          # The IAM Role must have permission to upload objects to the S3 bucket.
+          serviceAccountName: {{ .Values.backend.serviceAccount }}
+
+          # Restart the backup container if it fails.
+          # Kubernetes will not restart it after successful completion.
+          restartPolicy: OnFailure
+
+          # Define the container responsible for performing the database backup.
+          containers:
+            - name: backup
+
+              # Use the official AWS CLI image to interact with Amazon S3.
+              image: amazon/aws-cli:latest
+
+              # Execute the backup commands using the Linux shell.
+              command:
+                - /bin/sh
+                - -c
+                - |
+
+                  # Stop the script immediately if a command fails.
+                  # This prevents the backup process from continuing after an error.
+                  set -e
+
+                  # Generate a unique timestamp for the backup filename.
+                  # Format: YYYYMMDD-HHMMSS.
+                  # Example: 20261110-020000.
+                  DATE=$(date +%Y%m%d-%H%M%S)
+
+                  # Define the location of the SQLite database inside the container.
+                  # This file is provided through the mounted PersistentVolumeClaim.
+                  DB_PATH="/data/shipkit.db"
+
+                  # Define the destination object key inside the S3 bucket.
+                  # Each backup gets a unique filename based on its timestamp.
+                  BACKUP_KEY="backups/shipkit-db-${DATE}.db"
+
+                  # Print a message to indicate that the backup process has started.
+                  echo "Starting backup: ${DATE}"
+
+                  # Check whether the database file exists before uploading it.
+                  # If the file is missing, stop the script and report an error.
+                  if [ ! -f "$DB_PATH" ]; then
+                    echo "❌ Database file not found: $DB_PATH"
+                    exit 1
+                  fi
+
+                  # Upload the database file from the mounted volume to Amazon S3.
+                  # Source: Local database file inside the container.
+                  # Destination: S3 bucket and timestamped backup path.
+                  # The AWS region is provided by the Helm values configuration.
+                  aws s3 cp "$DB_PATH" \
+                    "s3://{{ .Values.backup.s3Bucket }}/${BACKUP_KEY}" \
+                    --region {{ .Values.global.region }}
+
+                  # Print a success message after the upload completes.
+                  echo "✅ Backup complete: s3://{{ .Values.backup.s3Bucket }}/${BACKUP_KEY}"
+
+                  # List the backup files stored in the S3 backup directory.
+                  # Display only the last five output lines for easier monitoring.
+                  aws s3 ls "s3://{{ .Values.backup.s3Bucket }}/backups/" \
+                    --region {{ .Values.global.region }} | tail -5
+
+              # Mount the database volume inside the backup container.
+              volumeMounts:
+                - name: shipkit-db
+
+                  # Make the database accessible through the /data directory.
+                  mountPath: /data
+
+                  # Mount the volume in read-only mode.
+                  # The backup container can read the database but cannot modify it.
+                  readOnly: true
+
+          # Define the storage volume used by the backup container.
+          volumes:
+            - name: shipkit-db
+
+              # Reuse the existing PersistentVolumeClaim containing the database.
+              # This allows the backup Pod to access the same persistent storage
+              # used by the backend application.
+              persistentVolumeClaim:
+                claimName: shipkit-db-pvc
+
+# End of the backup.enabled condition.
+# The CronJob is created only when backup.enabled is true.
+{{- end }}
