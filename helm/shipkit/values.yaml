@@ -87,3 +87,11 @@ externalSecrets:
   serviceAccount:
     name: external-secrets-sa
     namespace: external-secrets
+#---------------- Backup --------------------------------------------
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  # Every day at 2am UTC
+  s3Bucket: "shipkit-backups-818655836450"
+  retention: 30
+  # Keep 30 days of backups
