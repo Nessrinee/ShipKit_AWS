@@ -38,6 +38,33 @@ echo "      ✅ kubectl configured"
 echo "[2/4] Verifying cluster connectivity..."
 kubectl cluster-info --request-timeout=10s > /dev/null
 echo "      ✅ Cluster reachable"
+
+# ── Step 2.5: Back up the database before deploy ──────────────
+echo "[2.5/4] Backing up database..."
+S3_BUCKET="shipkit-backups-818655836450"
+BACKUP_FILE="$(date +%Y%m%d-%H%M%S)-before-${IMAGE_TAG}.db"
+
+if kubectl get pod -n ${NAMESPACE} -l app=shipkit-backend \
+     --field-selector=status.phase=Running -o name 2>/dev/null | grep -q pod; then
+
+  kubectl exec -i -n ${NAMESPACE} deploy/shipkit-backend -- sh -c 'cd /app && node -' <<'JS'
+const Database = require('better-sqlite3');
+new Database('/app/data/shipkit.db').backup('/tmp/backup.db')
+  .then(() => process.exit(0))
+  .catch((e) => { console.error(e); process.exit(1); });
+JS
+
+  kubectl exec -n ${NAMESPACE} deploy/shipkit-backend -- cat /tmp/backup.db > /tmp/${BACKUP_FILE}
+  kubectl exec -n ${NAMESPACE} deploy/shipkit-backend -- rm -f /tmp/backup.db
+
+  [ -s /tmp/${BACKUP_FILE} ] || { echo "       Backup file is empty"; exit 1; }
+  aws s3 cp /tmp/${BACKUP_FILE} \
+    s3://${S3_BUCKET}/pre-deploy/${BACKUP_FILE} --region ${REGION}
+  rm -f /tmp/${BACKUP_FILE}
+  echo "      ✅ Backup saved: pre-deploy/${BACKUP_FILE}"
+else
+  echo "      ⚠️  No running backend pod, backup skipped"
+fi
 # ── Step 3: Deploy with Helm ──────────────────────────────────
 echo "[3/4] Deploying with Helm..."
 helm upgrade --install shipkit ${HELM_CHART_PATH} \
