@@ -108,6 +108,32 @@ jobs:
             --name shipkit-eks \
             --region ${{ env.AWS_REGION }}
           kubectl cluster-info
+      
+      - name: Back up database before deploy
+        run: |
+          S3_BUCKET="shipkit-backups-818655836450"
+          BACKUP_FILE="$(date +%Y%m%d-%H%M%S)-before-${{ needs.build-and-push.outputs.image-tag }}.db"
+
+          if kubectl get pod -n shipkit -l app=shipkit-backend \
+               --field-selector=status.phase=Running -o name | grep -q pod; then
+
+            kubectl exec -i -n shipkit deploy/shipkit-backend -- sh -c 'cd /app && node -' <<'JS'
+          const Database = require('better-sqlite3');
+          new Database('/app/data/shipkit.db').backup('/tmp/backup.db')
+            .then(() => process.exit(0))
+            .catch((e) => { console.error(e); process.exit(1); });
+          JS
+
+            kubectl exec -n shipkit deploy/shipkit-backend -- cat /tmp/backup.db > /tmp/${BACKUP_FILE}
+            kubectl exec -n shipkit deploy/shipkit-backend -- rm -f /tmp/backup.db
+
+            [ -s /tmp/${BACKUP_FILE} ] || { echo "Backup file is empty"; exit 1; }
+            aws s3 cp /tmp/${BACKUP_FILE} \
+              s3://${S3_BUCKET}/pre-deploy/${BACKUP_FILE} --region ${{ env.AWS_REGION }}
+            echo "Backup saved: pre-deploy/${BACKUP_FILE}"
+          else
+            echo "No running backend pod, backup skipped"
+          fi
 
       - name: Deploy with Helm
         run: |
