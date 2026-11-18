@@ -1,16 +1,16 @@
 variable "name" {
-    type= string
+  type = string
 }
 variable "vpc_cidr" {
-    type = string
+  type = string
 }
 variable "azs" {
-    type = list(string)
+  type = list(string)
 
 }
 variable "cluster_name" {
-    type = string
-  
+  type = string
+
 }
 variable "single_nat_gateway" {
   type        = bool
