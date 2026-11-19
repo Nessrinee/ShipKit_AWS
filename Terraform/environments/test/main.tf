@@ -34,3 +34,14 @@ module "network" {
   # Use one NAT Gateway to reduce infrastructure costs in test
   single_nat_gateway = true
 }
+
+# ECR module 
+module "ecr" {
+  source       = "../../modules/ecr"
+  name         = "shipkit-test"
+  force_delete = true
+}
+
+output "ecr_repository_urls" {
+  value = module.ecr.repository_urls
+}
