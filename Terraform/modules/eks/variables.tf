@@ -1,3 +1,7 @@
+#------------------------------------
+# Cluster EKS
+#------------------------------------
+
 # Define the name of the Cluster 
 variable "name" {
   type = string
@@ -31,4 +35,37 @@ variable "admin_role_arns" {
 variable "log_retention_days" {
   type    = number
   default = 14
+}
+#-----------------------------------------------------
+# Worker Nodes
+#-------------------------------------------------------
+
+# Defines the EC2 instance types for worker nodes
+variable "node_instance_types" {
+  type    = list(string)
+  default = ["t3.medium"]
+}
+
+# Defines the desired number of worker nodes
+variable "node_desired_size" {
+  type    = number
+  default = 2
+}
+
+# Defines the minimum number of worker nodes
+variable "node_min_size" {
+  type    = number
+  default = 1
+}
+
+# Defines the maximum number of worker nodes
+variable "node_max_size" {
+  type    = number
+  default = 3
+}
+
+# Defines the disk size in GB for each worker node
+variable "node_disk_size" {
+  type    = number
+  default = 20
 }
