@@ -1,34 +1,33 @@
 # ======================================
-# STAGE 1 : Builder 
+# STAGE 1 : Builder
 # ======================================
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Install Python and C/C++ build toolchain required by node-gyp (e.g., better-sqlite3)
+RUN apk add --no-cache python3 make g++
+
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # ===========================================
-# STAGE 2 : Runtime - Lean production image 
+# STAGE 2 : Runtime - Lean production image
 # ===========================================
 FROM node:20-alpine AS runtime
 
-
-# Install dumb-init for proper signal handling 
-RUN apk add --no-cache dumb-init  && \
+RUN apk add --no-cache dumb-init && \
     apk upgrade --no-cache
 
-# Create a non-root user and group 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S -u 1001 -G nodejs nodeapp
+
 WORKDIR /app
 
-# Copy Only the production node_modules from the builder stage
 COPY --from=builder --chown=nodeapp:nodejs /app/node_modules ./node_modules
+COPY --chown=nodeapp:nodejs package.json ./
+COPY --chown=nodeapp:nodejs src ./src
 
-# Copy application source code
-COPY --chown=nodeapp:nodejs . .
-
-#
-RUN mkdir -p data logs && chown nodeapp:nodejs data logs 
+RUN mkdir -p data logs
 
 USER nodeapp
 

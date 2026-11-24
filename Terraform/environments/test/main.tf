@@ -45,3 +45,14 @@ module "ecr" {
 output "ecr_repository_urls" {
   value = module.ecr.repository_urls
 }
+
+# EKS module
+module "eks" {
+  source     = "../../modules/eks"
+  name       = "shipkit-test"
+  subnet_ids = module.network.private_subnet_ids
+
+  admin_role_arns = [
+    "arn:aws:iam::818655836450:role/shipkit-github-actions-role",
+  ]
+}
